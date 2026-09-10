@@ -7,7 +7,7 @@ node_modules/
 dist/
 dist-electron/
 release/
-build-resources/
+# build-resources/ - keep icons in repo (needed by CI builds)
 
 # Logs
 logs/
