@@ -469,3 +469,31 @@ export interface DashboardStats {
   stock_by_category: Array<{ category_id: string; category_name: string; quantity: number }>;
   kiln_status_breakdown: Array<{ status: string; count: number }>;
 }
+
+// ============== Phase 3 types ==============
+
+export interface StockBalance {
+  category_id: string;
+  category_name: string;
+  category_code: string;
+  quantity: number;
+  default_selling_rate: number;
+  is_active: boolean;
+}
+
+export interface StockMovement {
+  id: string;
+  date: string;
+  category_id: string;
+  category_name?: string;
+  movement_type: string;
+  quantity: number;
+  reference_type: string | null;
+  reference_id: string | null;
+  batch_id: string | null;
+  batch_number?: string;
+  notes: string | null;
+  entered_by: string;
+  entered_by_name?: string;
+  created_at: string;
+}

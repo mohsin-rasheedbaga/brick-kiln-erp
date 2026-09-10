@@ -17,6 +17,8 @@ import type {
   Batch, Customer, CustomerLedger, SalesInvoice, SalesInvoiceItem,
   CustomerPayment, Expense, ExpenseCategory,
   WorkerAdvance, WorkerPayment, CashMovement, CashBalance, DashboardStats,
+  // Phase 3 types
+  StockBalance, StockMovement as StockMovementType,
 } from '../types';
 
 const TOKEN_KEY = 'brick-kiln-erp-token';
@@ -334,4 +336,46 @@ export const cash = {
 // Dashboard
 export const dashboard = {
   stats: () => call<DashboardStats>('dashboard:stats'),
+};
+
+// =================== Phase 3 APIs ===================
+
+// Stock adjustments
+export const stock = {
+  balance: (includeInactive = false) => call<StockBalance[]>('stock:balance', { includeInactive }),
+  movements: (filters: { categoryId?: string; movementType?: string; from?: string; to?: string; limit?: number; offset?: number } = {}) =>
+    call<{ items: StockMovementType[]; total: number }>('stock:movements', filters),
+  adjustment: (data: {
+    date?: string;
+    categoryId: string;
+    direction: 'in' | 'out';
+    quantity: number;
+    reason: string;
+    batchId?: string;
+    notes?: string;
+  }) => call<StockMovementType>('stock:adjustment', data),
+  adjustmentsList: (filters: { categoryId?: string; from?: string; to?: string; limit?: number; offset?: number } = {}) =>
+    call<{ items: StockMovementType[]; total: number }>('stock:adjustments:list', filters),
+};
+
+// Reports
+export const reports = {
+  production: (filters: { from?: string; to?: string; stage?: string; workerId?: string; departmentId?: string; batchId?: string; groupBy?: 'stage' | 'worker' | 'department' | 'day' } = {}) =>
+    call<{ summary: any; rows: any[]; entries: any[] }>('reports:production', filters),
+  sales: (filters: { from?: string; to?: string; customerId?: string; batchId?: string; status?: string; groupBy?: 'customer' | 'day' | 'status' } = {}) =>
+    call<{ summary: any; rows: any[]; invoices: any[] }>('reports:sales', filters),
+  expenses: (filters: { from?: string; to?: string; categoryId?: string; departmentId?: string; batchId?: string; groupBy?: 'category' | 'department' | 'batch' | 'day' } = {}) =>
+    call<{ summary: any; rows: any[]; expenses: any[] }>('reports:expenses', filters),
+  customers: (includeInactive = false) =>
+    call<{ summary: any; customers: any[] }>('reports:customers', { includeInactive }),
+  workers: (filters: { from?: string; to?: string; departmentId?: string; workerId?: string } = {}) =>
+    call<{ summary: any; workers: any[] }>('reports:workers', filters),
+  batchCosting: (filters: { batchId?: string; status?: string } = {}) =>
+    call<{ summary: any; batches: any[] }>('reports:batch-costing', filters),
+  profitLoss: (filters: { from?: string; to?: string } = {}) =>
+    call<{ revenue: any; costs: any; profit_loss: number; margin_pct: number }>('reports:profit-loss', filters),
+  cashFlow: (filters: { from?: string; to?: string } = {}) =>
+    call<{ summary: any; by_type: any[]; movements: any[] }>('reports:cash-flow', filters),
+  stock: (filters: { from?: string; to?: string; categoryId?: string } = {}) =>
+    call<{ summary: any; categories: any[]; movements_summary: any[] }>('reports:stock', filters),
 };

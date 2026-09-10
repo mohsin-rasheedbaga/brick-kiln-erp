@@ -7,12 +7,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for v1.2.0
-- Reports (production, sales, expenses, customer, worker, batch costing, profit/loss)
-- PDF / Excel exports
-- Print sales invoices, payment receipts, customer statements
-- Dashboard charts (visual breakdowns)
-- Stock adjustments page (manual corrections with reasons)
+### Planned for v1.3.0
+- Print templates: sales invoice, payment receipt, customer statement, batch costing report
+- Settings UI for managing expense categories + brick categories (currently in reports only)
+- Auto-backup scheduler implementation (currently config-only)
+- Code signing for Windows installer (currently unsigned)
+- Localization framework (i18n with t() keys for Urdu support)
+
+## [1.2.0] — 2026-09-10
+
+### Added — Phase 3 (Reports + Stock Adjustments + Charts + Exports)
+
+**Reports Module (9 report types)**
+- Production Report: by stage, worker, department, or day; with KPIs + chart + entry list
+- Sales Report: by customer, day, or status; with totals + bar chart + invoice list
+- Expenses Report: by category, department, batch, or day; with donut chart + payment method breakdown
+- Customers Report: balances summary with opening, sales, paid, current balance
+- Workers Report: labour earnings, advances, payments, payable per worker
+- Batch Costing Report: per-batch costs, revenue, profit/loss, cost per 1000 bricks
+- Profit & Loss Report: revenue vs costs breakdown with margin %
+- Cash Flow Report: opening/closing balance, in/out by movement type
+- Stock Report: current levels + value + movement summary by type
+
+**Report Features**
+- Date range filter (defaults to current month)
+- Per-report-type filters (customer, worker, department, batch, status, category, etc.)
+- Group-by selector for production/sales/expenses reports
+- KPI cards at the top of each report
+- Visualizations: bar chart, donut chart, horizontal bar chart
+- Full entry-level detail tables
+- CSV export (with BOM for Excel UTF-8 compatibility)
+- Print / PDF export (browser print dialog with "Save as PDF")
+- Professional print layout with header (kiln name, report title, date range)
+
+**Stock Adjustments Module**
+- Three-tab view: Stock Levels / Adjustments / Movement History
+- Current stock with value calculation per category
+- Manual adjustments (IN or OUT) with required reason
+- Optional batch linking for adjustments
+- Negative stock protection (configurable via settings)
+- Full movement history (sales + production + adjustments combined)
+- Color-coded direction indicators (green IN, red OUT)
+
+**Chart Components (custom SVG, no external library)**
+- `BarChart`: vertical bars with values and labels
+- `HorizontalBarChart`: horizontal bars (good for ranked lists)
+- `DonutChart`: donut with center total + legend with percentages
+- `LineChart`: line with area gradient + grid lines + axis labels
+- `Sparkline`: tiny inline trend indicator
+- `KpiCard`: stat card with label, value, sublabel, trend indicator
+
+**Export Utilities**
+- `arrayToCsv`: convert any array of objects to CSV string
+- `downloadCsv`: trigger CSV download with BOM for Excel
+- `exportToCsv`: convenience wrapper
+- `printHtml`: open print window with custom HTML + CSS
+- `buildTableHtml`: build HTML table from rows + columns
+- `reportHeader`: standard report header (kiln name + title + date range)
+
+**Dashboard Enhancements**
+- Today's production by stage as bar chart (was previously a list)
+- Stock by category as donut chart (was previously a list)
+- 30-day production trend bar chart (new)
+- KPI cards with consistent styling via `KpiCard` component
+
+**IPC Infrastructure**
+- New: `stock.ts` (4 channels: balance, movements, adjustment, adjustments:list)
+- New: `reports.ts` (9 channels: production, sales, expenses, customers, workers, batch-costing, profit-loss, cash-flow, stock)
+- 13 new IPC channels whitelisted in preload
+- All reports enforce `reports.view` permission
+- Stock adjustments enforce `stock.adjust` permission
+- Manual adjustments recorded in audit log with old + new quantities
+
+**Sidebar Update**
+- New "Reports" group added
+- Stock moved under "Accounts" group
+- Cleaner navigation for end users
+
+### Files Changed
+- New: 2 IPC handlers (stock.ts, reports.ts)
+- New: 3 React pages (StockPage, ReportsPage)
+- New: 2 components (Charts.tsx, export.ts utility)
+- Modified: main.ts, preload.ts, lib/ipc.ts, types/index.ts, App.tsx, MainLayout.tsx, DashboardPage.tsx, package.json, CHANGELOG.md
+
+### Security
+- All reports require `reports.view` permission
+- Stock adjustments require `stock.adjust` permission (separate from view)
+- Negative stock protected by default (configurable override)
+- Every stock adjustment audited with reason, old/new quantity, and user
+
+### Known Limitations
+- Print templates for invoices/receipts not yet built (Phase 4)
+- Auto-backup scheduler not yet wired up (config-only)
+- No code signing for Windows installer (Phase 4)
 
 ## [1.1.0] — 2026-09-10
 

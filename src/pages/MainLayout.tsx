@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Users, Boxes, Building2, Package, ShieldCheck,
   Settings as SettingsIcon, History, DatabaseBackup, RefreshCw, LogOut,
   Menu, X, UserCircle, ChevronDown, ShoppingCart, Wallet, Users2,
+  BarChart3, Package as PackageIcon,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toast';
@@ -34,6 +35,10 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/expenses',          label: 'Expenses',         icon: Wallet,          permission: 'expenses.view', group: 'Accounts' },
   { to: '/worker-payments',   label: 'Worker Pay',        icon: Users,           permission: 'worker_payments.view', group: 'Accounts' },
   { to: '/cash',              label: 'Cash Register',     icon: Wallet,          permission: 'accounts.view', group: 'Accounts' },
+  { to: '/stock',             label: 'Stock',            icon: PackageIcon,     permission: 'stock.view', group: 'Accounts' },
+
+  // Reports
+  { to: '/reports',           label: 'Reports',          icon: BarChart3,        permission: 'reports.view', group: 'Reports' },
 
   // Administration
   { to: '/departments',       label: 'Departments',      icon: Building2,       permission: 'departments.manage', group: 'Administration' },

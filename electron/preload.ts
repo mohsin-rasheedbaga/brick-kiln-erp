@@ -62,6 +62,12 @@ const ALLOWED_CHANNELS = new Set<string>([
   'cash:balance', 'cash:movements', 'cash:adjustment',
   // dashboard (Phase 2)
   'dashboard:stats',
+  // stock adjustments (Phase 3)
+  'stock:balance', 'stock:movements', 'stock:adjustment', 'stock:adjustments:list',
+  // reports (Phase 3)
+  'reports:production', 'reports:sales', 'reports:expenses', 'reports:customers',
+  'reports:workers', 'reports:batch-costing', 'reports:profit-loss',
+  'reports:cash-flow', 'reports:stock',
 ]);
 
 contextBridge.exposeInMainWorld('erp', {

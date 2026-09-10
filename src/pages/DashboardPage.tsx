@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../stores/auth';
-import { dashboard as dashApi } from '../lib/ipc';
+import { dashboard as dashApi, reports as reportsApi } from '../lib/ipc';
 import type { DashboardStats } from '../types';
 import { Spinner } from '../components/Feedback';
+import { BarChart, DonutChart, KpiCard } from '../components/Charts';
 import { Link } from 'react-router-dom';
 import {
   Users, Building2, Package, Wallet, TrendingUp, TrendingDown,
@@ -22,10 +23,27 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 30-day production trend (loaded in parallel)
+  const [prodTrend, setProdTrend] = useState<Array<{ label: string; value: number }>>([]);
 
   useEffect(() => {
-    dashApi.stats()
-      .then(setStats)
+    Promise.all([
+      dashApi.stats(),
+      // 30-day production grouped by day
+      reportsApi.production({
+        from: new Date(Date.now() - 30 * 86400 * 1000).toISOString().slice(0, 10),
+        to: new Date().toISOString().slice(0, 10),
+        groupBy: 'day',
+      }),
+    ])
+      .then(([s, prod]) => {
+        setStats(s);
+        // Convert rows to chart data
+        setProdTrend((prod.rows || []).slice(0, 30).reverse().map((r: any) => ({
+          label: r.date ? r.date.slice(5) : '', // MM-DD
+          value: r.total_qty ?? 0,
+        })));
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -45,51 +63,40 @@ export default function DashboardPage() {
 
       {/* Today's activity cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
+        <KpiCard
           label="Today's Production"
           value={formatNumber(stats.today.total_production_qty)}
-          subtitle={`${formatCurrency(stats.today.total_labour)} labour`}
-          icon={Package}
-          color="bg-amber-50 text-amber-600"
-          to="/production"
+          sublabel={`${formatCurrency(stats.today.total_labour)} labour`}
+          icon={<Package className="h-5 w-5" />}
+          color="text-amber-600"
         />
-        <StatCard
+        <KpiCard
           label="Today's Sales"
           value={formatCurrency(stats.today.sales_total)}
-          subtitle={`${stats.today.sales_count} invoice${stats.today.sales_count === 1 ? '' : 's'}`}
-          icon={TrendingUp}
-          color="bg-emerald-50 text-emerald-600"
-          to="/sales"
+          sublabel={`${stats.today.sales_count} invoice${stats.today.sales_count === 1 ? '' : 's'}`}
+          icon={<TrendingUp className="h-5 w-5" />}
+          color="text-emerald-600"
         />
-        <StatCard
+        <KpiCard
           label="Today's Expenses"
           value={formatCurrency(stats.today.expenses_total)}
-          subtitle={`${stats.today.expenses_count} expense${stats.today.expenses_count === 1 ? '' : 's'}`}
-          icon={TrendingDown}
-          color="bg-red-50 text-red-600"
-          to="/expenses"
+          sublabel={`${stats.today.expenses_count} expense${stats.today.expenses_count === 1 ? '' : 's'}`}
+          icon={<TrendingDown className="h-5 w-5" />}
+          color="text-red-600"
         />
-        <StatCard
+        <KpiCard
           label="Cash Balance"
           value={formatCurrency(stats.cash_balance)}
-          subtitle={`${formatCurrency(stats.today.cash_received)} received today`}
-          icon={Wallet}
-          color="bg-brand-50 text-brand-600"
-          to="/cash"
+          sublabel={`${formatCurrency(stats.today.cash_received)} received today`}
+          icon={<Wallet className="h-5 w-5" />}
+          color="text-brand-600"
         />
       </div>
 
-      {/* Operational stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MiniStatCard label="Active Workers" value={stats.active_workers} icon={Users} to="/workers" />
-        <MiniStatCard label="Departments" value={stats.active_departments} icon={Building2} to="/departments" />
-        <MiniStatCard label="Active Batches" value={stats.active_batches} icon={Package} to="/batches" subtitle={`${stats.firing_batches} firing`} />
-        <MiniStatCard label="Open Invoices" value={stats.open_invoices_count} icon={AlertCircle} to="/sales" />
-      </div>
-
-      {/* Today's production breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card p-5">
+      {/* Charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Today's production by stage (bar chart) */}
+        <div className="card p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-slate-900">Today's Production by Stage</h2>
             <Link to="/production" className="text-xs text-brand-600 hover:underline">View all →</Link>
@@ -97,38 +104,61 @@ export default function DashboardPage() {
           {stats.today.production_by_stage.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-6">No production recorded today.</p>
           ) : (
-            <div className="space-y-2">
-              {stats.today.production_by_stage.map((p) => (
-                <div key={p.stage} className="flex items-center justify-between p-2 rounded hover:bg-slate-50">
-                  <div>
-                    <div className="text-sm font-medium text-slate-900">{STAGE_LABELS[p.stage] || p.stage}</div>
-                    <div className="text-xs text-slate-500">{formatCurrency(p.total_labour)} labour</div>
-                  </div>
-                  <div className="text-lg font-bold text-slate-900 font-mono">{formatNumber(p.total_qty)}</div>
-                </div>
-              ))}
-            </div>
+            <BarChart
+              data={stats.today.production_by_stage.map((p) => ({
+                label: STAGE_LABELS[p.stage] || p.stage,
+                value: p.total_qty,
+              }))}
+              formatValue={(n) => formatNumber(n)}
+              height={220}
+            />
           )}
         </div>
 
+        {/* Stock by category donut */}
         <div className="card p-5">
-          <h2 className="text-base font-semibold text-slate-900 mb-3">Stock by Category</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-semibold text-slate-900">Stock by Category</h2>
+            <Link to="/stock" className="text-xs text-brand-600 hover:underline">View →</Link>
+          </div>
           {stats.stock_by_category.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-6">No stock on hand.</p>
           ) : (
-            <div className="space-y-2">
-              {stats.stock_by_category.map((s) => (
-                <div key={s.category_id} className="flex items-center justify-between p-2 rounded hover:bg-slate-50">
-                  <div className="flex items-center gap-2">
-                    <Boxes className="h-4 w-4 text-slate-400" />
-                    <div className="text-sm font-medium text-slate-900">{s.category_name}</div>
-                  </div>
-                  <div className="text-lg font-bold text-slate-900 font-mono">{formatNumber(s.quantity)}</div>
-                </div>
-              ))}
-            </div>
+            <DonutChart
+              data={stats.stock_by_category.map((s) => ({
+                label: s.category_name,
+                value: s.quantity,
+              }))}
+              formatValue={(n) => formatNumber(n)}
+              size={140}
+            />
           )}
         </div>
+      </div>
+
+      {/* 30-day production trend */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-slate-900">Production Trend (Last 30 Days)</h2>
+          <Link to="/reports" className="text-xs text-brand-600 hover:underline">Reports →</Link>
+        </div>
+        {prodTrend.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-6">No production in the last 30 days.</p>
+        ) : (
+          <BarChart
+            data={prodTrend}
+            formatValue={(n) => formatNumber(n)}
+            height={200}
+          />
+        )}
+      </div>
+
+      {/* Operational mini-stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MiniStatCard label="Active Workers" value={stats.active_workers} icon={Users} to="/workers" />
+        <MiniStatCard label="Departments" value={stats.active_departments} icon={Building2} to="/departments" />
+        <MiniStatCard label="Active Batches" value={stats.active_batches} icon={Package} to="/batches" subtitle={`${stats.firing_batches} firing`} />
+        <MiniStatCard label="Open Invoices" value={stats.open_invoices_count} icon={AlertCircle} to="/sales" />
       </div>
 
       {/* Receivables & payables */}
@@ -183,27 +213,6 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function StatCard({ label, value, subtitle, icon: Icon, color, to }: {
-  label: string; value: string; subtitle?: string; icon: React.ElementType; color: string; to: string;
-}) {
-  return (
-    <Link to={to} className="block">
-      <div className="card p-4 hover:shadow-md hover:border-brand-300 transition">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">{label}</div>
-            <div className="text-xl font-bold text-slate-900 mt-1">{value}</div>
-            {subtitle && <div className="text-xs text-slate-500 mt-1">{subtitle}</div>}
-          </div>
-          <div className={`h-9 w-9 rounded-md flex items-center justify-center ${color}`}>
-            <Icon className="h-5 w-5" />
-          </div>
-        </div>
-      </div>
-    </Link>
   );
 }
 

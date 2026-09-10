@@ -38,6 +38,9 @@ import { registerExpenseHandlers } from './ipc/expenses';
 import { registerWorkerPaymentHandlers } from './ipc/workerPayments';
 import { registerCashHandlers } from './ipc/cash';
 import { registerDashboardHandlers } from './ipc/dashboard';
+// Phase 3 modules
+import { registerStockHandlers } from './ipc/stock';
+import { registerReportHandlers } from './ipc/reports';
 
 // Configure logging
 log.transports.file.level = 'info';
@@ -199,6 +202,9 @@ function registerIpcHandlers(): void {
   registerWorkerPaymentHandlers();
   registerCashHandlers();
   registerDashboardHandlers();
+  // Phase 3 modules
+  registerStockHandlers();
+  registerReportHandlers();
   log.info('[main] All IPC handlers registered.');
 }
 
