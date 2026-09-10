@@ -1,0 +1,119 @@
+{
+  "name": "brick-kiln-erp",
+  "version": "1.0.0",
+  "description": "Brick Kiln Management ERP for Windows Desktop - Production, Labour, Sales, Accounts",
+  "author": "Brick Kiln ERP Team",
+  "license": "MIT",
+  "main": "dist-electron/main.js",
+  "homepage": "https://github.com/mohsin-rasheedbaga/brick-kiln-erp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mohsin-rasheedbaga/brick-kiln-erp.git"
+  },
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:vite\" \"npm:dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "wait-on tcp:5173 && cross-env NODE_ENV=development tsc -p electron/tsconfig.json && electron .",
+    "build": "tsc -p electron/tsconfig.json && vite build",
+    "build:win": "npm run build && electron-builder --win --x64",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:linux": "npm run build && electron-builder --linux",
+    "release": "npm run build && electron-builder --win --x64 --publish always",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit -p electron/tsconfig.json && tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "bcryptjs": "^2.4.3",
+    "electron-updater": "^6.3.4",
+    "electron-log": "^5.1.7",
+    "jsbarcode": "^3.11.6",
+    "qrcode": "^1.5.4",
+    "uuid": "^10.0.0",
+    "date-fns": "^3.6.0",
+    "zustand": "^4.5.4",
+    "react-router-dom": "^6.26.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lucide-react": "^0.441.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.2",
+    "class-variance-authority": "^0.7.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.5.4",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@types/jsbarcode": "^3.11.6",
+    "@types/qrcode": "^1.5.5",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.0.1",
+    "cross-env": "^7.0.3",
+    "electron": "^32.1.0",
+    "electron-builder": "^25.0.5",
+    "electron-rebuild": "^3.2.9",
+    "postcss": "^8.4.45",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.3",
+    "vitest": "^2.0.5",
+    "wait-on": "^7.2.0",
+    "eslint": "^9.10.0"
+  },
+  "build": {
+    "appId": "com.brickkiln.erp",
+    "productName": "Brick Kiln ERP",
+    "copyright": "Copyright © 2026 Brick Kiln ERP",
+    "directories": {
+      "output": "release",
+      "buildResources": "build-resources"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "electron/database/seed.sql",
+        "to": "seed.sql"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build-resources/icon.ico",
+      "publisherName": "Brick Kiln ERP",
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Brick Kiln ERP",
+      "installerIcon": "build-resources/icon.ico",
+      "uninstallerIcon": "build-resources/icon.ico",
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "mohsin-rasheedbaga",
+      "repo": "brick-kiln-erp",
+      "releaseType": "release"
+    }
+  }
+}

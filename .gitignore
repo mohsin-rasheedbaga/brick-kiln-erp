@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs
+dist/
+dist-electron/
+release/
+build-resources/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Database (runtime, not source)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+backups/
+
+# Test coverage
+coverage/
+
+# Cache
+.cache/
+.eslintcache
+.vite/
+
+# Token / secrets - NEVER commit
+*.pem
+*.key
+token.txt

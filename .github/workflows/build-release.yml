@@ -1,0 +1,76 @@
+name: Build & Release (Windows)
+
+on:
+  push:
+    tags:
+      - 'v*'            # triggers on tags like v1.0.0, v1.0.1, v1.1.0
+  workflow_dispatch:    # manual trigger from Actions tab
+    inputs:
+      publish:
+        description: 'Publish to GitHub Releases?'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: write       # required for creating releases
+
+jobs:
+  build:
+    name: Build Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules (better-sqlite3) for Electron
+        run: npx electron-rebuild -f -w better-sqlite3
+
+      - name: Type-check
+        run: |
+          npx tsc --noEmit -p electron/tsconfig.json
+          npx tsc --noEmit -p tsconfig.json
+
+      - name: Build renderer & main
+        run: npm run build
+        env:
+          NODE_ENV: production
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & publish Windows installer
+        uses: samuelmeuli/action-electron-builder@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release: ${{ github.event_name == 'push' || github.event.inputs.publish == 'true' }}
+          tag: ${{ github.ref_name }}
+          args: '--win --x64'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brick-kiln-erp-windows-${{ github.ref_name || github.run_id }}
+          path: |
+            release/*.exe
+            release/*.yml
+            release/*.blockmap
+            release/latest*.yml
+          retention-days: 30
+          if-no-files-found: warn
