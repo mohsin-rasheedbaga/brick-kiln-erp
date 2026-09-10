@@ -36,7 +36,12 @@ export interface User {
   roleId: string;
   roleName: string;
   departmentId?: string;
+  departmentName?: string;
   mustChangePassword: boolean;
+  isActive?: boolean;
+  lastLoginAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   permissions: string[];
 }
 
@@ -112,6 +117,7 @@ export interface Role {
   is_system: boolean;
   is_active: boolean;
   user_count?: number;
+  userCount?: number;
   permission_codes?: string[];
 }
 

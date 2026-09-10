@@ -42,8 +42,8 @@ export default function UsersPage() {
 
   const handleToggle = async (u: User) => {
     try {
-      await userApi.setActive(u.id, !u.is_active);
-      pushToast('success', `${u.username} ${u.is_active ? 'disabled' : 'enabled'}.`);
+      await userApi.setActive(u.id, !u.isActive);
+      pushToast('success', `${u.username} ${u.isActive ? 'disabled' : 'enabled'}.`);
       load();
     } catch (err: any) { pushToast('error', err.message); }
   };

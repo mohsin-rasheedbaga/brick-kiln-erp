@@ -183,6 +183,7 @@ export function registerSalesHandlers(): void {
     from?: string;
     to?: string;
     search?: string;
+    includeVoid?: boolean;
     limit?: number;
     offset?: number;
   }): Promise<IpcResult<{ items: SalesInvoice[]; total: number }>> => {

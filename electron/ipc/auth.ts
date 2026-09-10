@@ -212,10 +212,10 @@ export function registerAuthHandlers(): void {
   });
 
   ipcMain.handle('auth:check-permission', async (_evt, args: { token: string; permission: string }): Promise<IpcResult<boolean>> => {
-    return wrap(async () => hasPermission(args.token, args.permission));
+    return wrap(async () => hasPermission(args.token, args.permission))();
   });
 
   ipcMain.handle('auth:has-any-permission', async (_evt, args: { token: string; permissions: string[] }): Promise<IpcResult<boolean>> => {
-    return wrap(async () => hasAnyPermission(args.token, args.permissions));
+    return wrap(async () => hasAnyPermission(args.token, args.permissions))();
   });
 }

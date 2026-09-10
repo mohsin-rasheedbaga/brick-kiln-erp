@@ -52,15 +52,11 @@ jobs:
           NODE_ENV: production
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & publish Windows installer
-        uses: samuelmeuli/action-electron-builder@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          release: ${{ github.event_name == 'push' || github.event.inputs.publish == 'true' }}
-          tag: ${{ github.ref_name }}
-          args: '--win --x64'
+      - name: Build Windows installer
+        run: npx electron-builder --win --x64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_ENV: production
 
       - name: Upload build artifacts
         if: always()
@@ -74,3 +70,10 @@ jobs:
             release/latest*.yml
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Publish to GitHub Releases
+        if: ${{ github.event_name == 'push' || github.event.inputs.publish == 'true' }}
+        run: npx electron-builder --win --x64 --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_ENV: production

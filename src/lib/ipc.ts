@@ -139,8 +139,14 @@ export const users = {
     username: string; password: string; full_name: string; email?: string; phone?: string;
     role_id: string; department_id?: string; must_change_password?: boolean;
   }) => call<User>('users:create', data),
-  update: (id: string, changes: Partial<User>) =>
-    call<User>('users:update', { id, ...changes }),
+  update: (id: string, changes: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    role_id?: string;
+    department_id?: string;
+    must_change_password?: boolean;
+  }) => call<User>('users:update', { id, ...changes }),
   setActive: (id: string, active: boolean) =>
     call<{ success: true }>('users:set-active', { id, active }),
   resetPassword: (id: string, newPassword: string, mustChange = true) =>
@@ -217,8 +223,15 @@ export const batches = {
   get: (id: string) => call<Batch | null>('batches:get', { id }),
   create: (data: { kilnId?: string; startDate?: string; notes?: string }) =>
     call<Batch>('batches:create', data),
-  update: (id: string, changes: Partial<Batch> & { fuelCost?: number; otherCost?: number; brokenQuantity?: number }) =>
-    call<Batch>('batches:update', { id, ...changes }),
+  update: (id: string, changes: {
+    kilnId?: string | null;
+    startDate?: string;
+    endDate?: string | null;
+    notes?: string;
+    fuelCost?: number;
+    otherCost?: number;
+    brokenQuantity?: number;
+  }) => call<Batch>('batches:update', { id, ...changes }),
   setStatus: (id: string, status: string, endDate?: string) =>
     call<{ success: true }>('batches:set-status', { id, status, endDate }),
   delete: (id: string) => call<{ success: true }>('batches:delete', { id }),

@@ -236,7 +236,7 @@ export function registerProductionHandlers(): void {
         // Update stock on baked_brick_unloading
         if (args.stage === 'baked_brick_unloading') {
           const categoryId = args.categoryId || 'cat-a';
-          adjustStock(db, categoryId, args.quantity, 'production_in', id, args.batchId ?? null, args.notes, session.userId);
+          adjustStock(db, categoryId, args.quantity, 'production_in', id, args.batchId ?? null, args.notes ?? null, session.userId);
         }
 
         audit({

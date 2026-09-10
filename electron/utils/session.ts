@@ -44,21 +44,22 @@ export function createSession(user: {
   const token = uuidv4() + '.' + uuidv4();
   const expiresAt = new Date(Date.now() + SESSION_TTL_MINUTES * 60 * 1000).toISOString();
 
+  // Get role name first (so it's available when constructing the session object)
+  const db = getDb();
+  const role = get<{ name: string }>(db, 'SELECT name FROM roles WHERE id = ?', user.role_id);
+  const roleName = role?.name ?? 'Unknown';
+
   const session: Session = {
     token,
     userId: user.id,
     username: user.username,
     fullName: user.full_name,
     roleId: user.role_id,
+    roleName,
     departmentId: user.department_id,
     permissions,
     expiresAt,
   };
-
-  // Get role name
-  const db = getDb();
-  const role = get<{ name: string }>(db, 'SELECT name FROM roles WHERE id = ?', user.role_id);
-  session.roleName = role?.name ?? 'Unknown';
 
   // Persist to DB
   const tokenHash = bcrypt.hashSync(token, 10);
