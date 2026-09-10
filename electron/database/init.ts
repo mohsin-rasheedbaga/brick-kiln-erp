@@ -13,34 +13,58 @@ import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import log from 'electron-log';
+import { app } from 'electron';
 import { getDb, execSql, get, run, transaction } from './connection';
 
 const SCHEMA_VERSION = '1.0.0';
 
 /**
  * Resolve a SQL file path.
- * - In production: the schema.sql is bundled in extraResources (root of app.asar.unpacked)
- *   but for simplicity we ship the SQL files inside the app resources.
- * - In development: read directly from electron/database/
+ *
+ * In development:
+ *   - SQL files live at <project-root>/electron/database/
+ *   - __dirname points to dist-electron/, so we go up one level + database/
+ *
+ * In production (packaged app):
+ *   - SQL files are bundled via electron-builder "extraResources" config:
+ *       extraResources: [
+ *         { "from": "electron/database/schema.sql", "to": "schema.sql" },
+ *         { "from": "electron/database/seed.sql",    "to": "seed.sql"    }
+ *       ]
+ *   - This places them at: <process.resourcesPath>/schema.sql
+ *                         and <process.resourcesPath>/seed.sql
+ *   - app.isPackaged is true, so process.resourcesPath is the install dir's resources/
  */
 function resolveSqlFile(filename: string): string {
-  const candidates = [
-    // Development
-    path.join(__dirname, '..', 'database', filename),
-    path.join(process.cwd(), 'electron', 'database', filename),
-    // Production (extraResources)
-    path.join(process.resourcesPath, filename),
-    path.join(process.resourcesPath, 'database', filename),
-    // Fallback - app dir
-    path.join(__dirname, 'database', filename),
-  ];
+  const candidates: string[] = [];
+
+  // Production paths (highest priority for packaged app)
+  if (process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, filename));
+    candidates.push(path.join(process.resourcesPath, 'database', filename));
+  }
+
+  // Development paths (when running from source via `npm run dev`)
+  candidates.push(path.join(__dirname, '..', 'database', filename));
+  candidates.push(path.join(process.cwd(), 'electron', 'database', filename));
+
+  // Fallbacks
+  candidates.push(path.join(__dirname, 'database', filename));
+  candidates.push(path.join(__dirname, filename));
 
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
       return candidate;
     }
   }
-  throw new Error(`Could not resolve SQL file: ${filename}. Tried: ${candidates.join(', ')}`);
+  const packaged = app ? app.isPackaged : false;
+  throw new Error(
+    `Could not resolve SQL file: ${filename}. ` +
+    `App packaged: ${packaged}. ` +
+    `process.resourcesPath: ${process.resourcesPath || '(undefined)'}. ` +
+    `__dirname: ${__dirname}. ` +
+    `Tried paths:\n  - ${candidates.join('\n  - ')}`
+  );
 }
 
 /**

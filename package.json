@@ -1,6 +1,6 @@
 {
   "name": "brick-kiln-erp",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Brick Kiln Management ERP for Windows Desktop - Production, Labour, Sales, Accounts",
   "author": "Brick Kiln ERP Team",
   "license": "MIT",
@@ -82,6 +82,10 @@
       "package.json"
     ],
     "extraResources": [
+      {
+        "from": "electron/database/schema.sql",
+        "to": "schema.sql"
+      },
       {
         "from": "electron/database/seed.sql",
         "to": "seed.sql"
