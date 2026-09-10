@@ -7,15 +7,134 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for v1.1.0
-- Sales invoice creation with multi-line items
-- Customer management + ledger
-- Customer payment receipts
-- Automatic stock deduction on sale
-- Cash register view
-- Worker advance & payment recording
-- Expense management
-- Batch management with costing
+### Planned for v1.2.0
+- Reports (production, sales, expenses, customer, worker, batch costing, profit/loss)
+- PDF / Excel exports
+- Print sales invoices, payment receipts, customer statements
+- Dashboard charts (visual breakdowns)
+- Stock adjustments page (manual corrections with reasons)
+
+## [1.1.0] — 2026-09-10
+
+### Added — Phase 2 (Sales + Customers + Cash + Expenses + Worker Payments + Batches)
+
+**Batches Module**
+- Full CRUD with auto-generated batch numbers (BATCH-2026-0001)
+- Status workflow: open → firing → completed → closed → cancelled
+- Auto-tracking of raw bricks loaded & baked bricks unloaded (from production entries)
+- Cost aggregation: labour (auto), transport (auto), fuel (manual), other (manual)
+- Total cost recomputed on every production/expense change
+- Sales revenue tracking per batch
+- Profit/loss = total_cost − sales_revenue (live calculation)
+- Batch cost summary endpoint (production by stage + expense breakdown)
+
+**Customers Module**
+- Full CRUD with auto-generated codes (CUST-0001)
+- Opening balance tracking
+- Credit limit (optional)
+- Customer ledger derived from transactions:
+  - Opening balance + SUM(invoice totals) − SUM(payments) = Current balance
+- Customer detail page with invoices + payments tables
+- Lookup by code, mobile, or CNIC
+- Activate/deactivate (preserves history)
+
+**Sales Invoices Module**
+- Multi-line invoice creation (multiple brick categories per invoice)
+- Auto-generated invoice numbers (INV-2026-00001)
+- Subtotal / Discount / Total / Paid / Remaining calculations
+- Payment status: unpaid / partial / paid / overpaid
+- Automatic stock deduction on sale (per line item)
+- Stock movement recorded with reference_type='sale'
+- Negative stock protection (configurable via settings)
+- Optional batch linking (tracks sales per batch)
+- Inline customer payment + cash movement on creation
+- Void invoices with reason (reverses stock, payments, cash, batch totals)
+- Invoice view modal with full line items and totals
+- Search by invoice #, customer name, or code
+
+**Customer Payments Module**
+- Receipt creation (RCP-2026-00001)
+- Optional invoice linking (auto-updates invoice paid/remaining/status)
+- Payment methods: cash, bank, cheque, other
+- Reference number tracking (cheque #, txn id)
+- Cash register update (for cash payments)
+- Void payments (reverses invoice and cash impacts)
+
+**Expenses Module**
+- Full CRUD with auto-generated numbers (EXP-2026-00001)
+- 12 default expense categories (Coal, Wood, Diesel, Electricity, Water, Labour, Transport, Repairs, Maintenance, Machinery, Food, Miscellaneous)
+- Custom category creation
+- Optional department & batch linking
+- Payment methods: cash, bank, cheque, credit, other
+- Cash register deduction (for cash payments)
+- Batch totals update (other_cost) when batch linked
+- Void expenses (reverses cash and batch impacts)
+- Search and filter by category, department, batch, date range
+
+**Worker Advances & Payments Module**
+- Two separate tabs: Advances (ADV-2026-00001) and Payments (WPAY-2026-00001)
+- Worker selection with department display
+- Payment methods: cash, bank, cheque, other
+- Cash register deduction (for cash payments)
+- Worker ledger auto-updates (visible in worker detail page)
+- Void with reason (reverses cash impact)
+- Filter by worker, search by worker name/code/number
+
+**Cash Register Module**
+- Live cash balance (SUM of all movements)
+- Total in / Total out summary cards
+- Movement types: opening, sale, customer_payment, expense_out, worker_payment_out, advance_out, income_in, adjustment_in, adjustment_out, transfer
+- Filter by movement type
+- Manual adjustments (opening balance, income, corrections)
+- Full movement history with date, type, description, entered by, amount
+- Color-coded: green for IN, red for OUT
+
+**Dashboard Overhaul**
+- Real stats endpoint (no more placeholders)
+- Today's production by stage with totals
+- Today's sales count + total + cash received
+- Today's expenses count + total
+- Current cash balance
+- Active/inactive/left worker counts
+- Active batches + firing batches
+- Open invoices count
+- Customer receivables (sum of outstanding balances)
+- Worker payable (sum of remaining balances)
+- Stock by category breakdown
+- Kiln status breakdown
+- Quick action grid
+
+**Sidebar Restructure**
+- Grouped navigation: Operations / Sales & Finance / Accounts / Administration
+- Cleaner visual hierarchy with section headers
+
+**IPC Infrastructure**
+- 8 new IPC handler files (batches, customers, sales, customerPayments, expenses, workerPayments, cash, dashboard)
+- 33 new IPC channels whitelisted in preload
+- Auto-generated sequential codes for all transaction types (BATCH, CUST, INV, RCP, EXP, ADV, WPAY)
+- Transaction-based accounting: balances never manually entered
+- Void (instead of delete) for all monetary transactions — preserves audit trail
+- Automatic cash register updates from sales, payments, expenses, advances, worker payments
+- Automatic stock adjustments from sales and production unloading
+- Automatic batch cost recomputation on every related transaction
+
+**Documentation**
+- CHANGELOG updated with Phase 2 details
+- README will be updated in next iteration
+
+### Security
+- All Phase 2 modules enforce permission checks at IPC layer
+- Cash adjustments require `cash.manage` permission
+- Sales void requires `sales.void` permission (separate from create)
+- Expense void requires `expenses.void` permission
+- Worker payment void requires `worker_payments.create` permission
+- Every monetary action audited with old/new values
+
+### Known Limitations
+- Reports module not yet built (Phase 3)
+- No PDF/Excel exports yet (Phase 3)
+- No print templates for invoices/receipts yet (Phase 3)
+- Dashboard has no charts yet (Phase 3)
 
 ## [1.0.0] — 2026-09-10
 

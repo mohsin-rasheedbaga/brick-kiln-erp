@@ -13,6 +13,10 @@ import type {
   Department, Worker, WorkType, BrickCategory, Kiln,
   Role, Permission, Settings, ProductionEntry, WorkerLedger,
   AuditLogEntry, BackupRecord, User,
+  // Phase 2 types
+  Batch, Customer, CustomerLedger, SalesInvoice, SalesInvoiceItem,
+  CustomerPayment, Expense, ExpenseCategory,
+  WorkerAdvance, WorkerPayment, CashMovement, CashBalance, DashboardStats,
 } from '../types';
 
 const TOKEN_KEY = 'brick-kiln-erp-token';
@@ -200,4 +204,134 @@ export const updates = {
   check: () => call<{ available: boolean; version?: string; releaseNotes?: string; releaseDate?: string }>('update:check'),
   download: () => call<{ started: true }>('update:download'),
   install: () => call<{ started: true }>('update:install'),
+};
+
+// =================== Phase 2 APIs ===================
+
+// Batches
+export const batches = {
+  list: (filters: { status?: string; kilnId?: string; search?: string; limit?: number; offset?: number } = {}) =>
+    call<{ items: Batch[]; total: number }>('batches:list', filters),
+  get: (id: string) => call<Batch | null>('batches:get', { id }),
+  create: (data: { kilnId?: string; startDate?: string; notes?: string }) =>
+    call<Batch>('batches:create', data),
+  update: (id: string, changes: Partial<Batch> & { fuelCost?: number; otherCost?: number; brokenQuantity?: number }) =>
+    call<Batch>('batches:update', { id, ...changes }),
+  setStatus: (id: string, status: string, endDate?: string) =>
+    call<{ success: true }>('batches:set-status', { id, status, endDate }),
+  delete: (id: string) => call<{ success: true }>('batches:delete', { id }),
+  costSummary: (id: string) =>
+    call<{ batch: Batch; production_by_stage: any[]; expense_breakdown: any[]; sales_count: number; sales_total: number }>('batches:cost-summary', { id }),
+};
+
+// Customers
+export const customers = {
+  list: (filters: { search?: string; includeInactive?: boolean; limit?: number; offset?: number } = {}) =>
+    call<{ items: Customer[]; total: number }>('customers:list', filters),
+  get: (id: string) => call<Customer | null>('customers:get', { id }),
+  create: (data: {
+    name: string; mobile?: string; phone?: string; address?: string;
+    cnic?: string; openingBalance?: number; creditLimit?: number; notes?: string;
+  }) => call<Customer>('customers:create', data),
+  update: (id: string, changes: Partial<Customer>) =>
+    call<Customer>('customers:update', { id, ...changes }),
+  setActive: (id: string, active: boolean) =>
+    call<{ success: true }>('customers:set-active', { id, active }),
+  delete: (id: string) => call<{ success: true }>('customers:delete', { id }),
+  ledger: (id: string, from?: string, to?: string) =>
+    call<CustomerLedger>('customers:ledger', { id, from, to }),
+  lookupByCode: (code: string) => call<Customer | null>('customers:lookup-by-code', { code }),
+};
+
+// Sales invoices
+export const sales = {
+  list: (filters: {
+    customerId?: string; batchId?: string; status?: string;
+    from?: string; to?: string; search?: string; includeVoid?: boolean;
+    limit?: number; offset?: number;
+  } = {}) => call<{ items: SalesInvoice[]; total: number }>('sales:list', filters),
+  get: (id: string) => call<SalesInvoice | null>('sales:get', { id }),
+  create: (data: {
+    date?: string; customerId: string; batchId?: string;
+    items: Array<{ category_id: string; quantity: number; rate: number }>;
+    discount?: number; paid?: number; paymentMethod?: string; notes?: string;
+  }) => call<SalesInvoice>('sales:create', data),
+  void: (id: string, reason: string) => call<{ success: true }>('sales:void', { id, reason }),
+};
+
+// Customer payments
+export const customerPayments = {
+  list: (filters: {
+    customerId?: string; invoiceId?: string; from?: string; to?: string;
+    search?: string; includeVoid?: boolean; limit?: number; offset?: number;
+  } = {}) => call<{ items: CustomerPayment[]; total: number }>('customer-payments:list', filters),
+  create: (data: {
+    date?: string; customerId: string; invoiceId?: string; amount: number;
+    paymentMethod?: string; referenceNo?: string; notes?: string;
+  }) => call<CustomerPayment>('customer-payments:create', data),
+  void: (id: string, reason: string) => call<{ success: true }>('customer-payments:void', { id, reason }),
+};
+
+// Expenses
+export const expenses = {
+  list: (filters: {
+    categoryId?: string; departmentId?: string; batchId?: string;
+    from?: string; to?: string; search?: string; includeVoid?: boolean;
+    limit?: number; offset?: number;
+  } = {}) => call<{ items: Expense[]; total: number; totalAmount: number }>('expenses:list', filters),
+  create: (data: {
+    date?: string; categoryId: string; departmentId?: string; batchId?: string;
+    amount: number; paymentMethod?: string; referenceNo?: string;
+    paidTo?: string; description?: string;
+  }) => call<Expense>('expenses:create', data),
+  void: (id: string, reason: string) => call<{ success: true }>('expenses:void', { id, reason }),
+};
+
+// Expense categories
+export const expenseCategories = {
+  list: (includeInactive = false) => call<ExpenseCategory[]>('expense-categories:list', { includeInactive }),
+  create: (data: { name: string; code: string; description?: string }) =>
+    call<ExpenseCategory>('expense-categories:create', data),
+  setActive: (id: string, active: boolean) =>
+    call<{ success: true }>('expense-categories:set-active', { id, active }),
+};
+
+// Worker advances
+export const workerAdvances = {
+  list: (filters: { workerId?: string; from?: string; to?: string; includeVoid?: boolean; limit?: number; offset?: number } = {}) =>
+    call<{ items: WorkerAdvance[]; total: number; totalAmount: number }>('worker-advances:list', filters),
+  create: (data: {
+    date?: string; workerId: string; amount: number;
+    paymentMethod?: string; referenceNo?: string; description?: string;
+  }) => call<WorkerAdvance>('worker-advances:create', data),
+  void: (id: string, reason: string) => call<{ success: true }>('worker-advances:void', { id, reason }),
+};
+
+// Worker payments
+export const workerPayments = {
+  list: (filters: { workerId?: string; from?: string; to?: string; includeVoid?: boolean; limit?: number; offset?: number } = {}) =>
+    call<{ items: WorkerPayment[]; total: number; totalAmount: number }>('worker-payments:list', filters),
+  create: (data: {
+    date?: string; workerId: string; amount: number;
+    paymentMethod?: string; referenceNo?: string; description?: string;
+  }) => call<WorkerPayment>('worker-payments:create', data),
+  void: (id: string, reason: string) => call<{ success: true }>('worker-payments:void', { id, reason }),
+};
+
+// Cash register
+export const cash = {
+  balance: (asOf?: string) => call<CashBalance>('cash:balance', { asOf }),
+  movements: (filters: { movementType?: string; from?: string; to?: string; limit?: number; offset?: number } = {}) =>
+    call<{ items: CashMovement[]; total: number; runningBalance: number }>('cash:movements', filters),
+  adjustment: (data: {
+    date?: string;
+    movementType: 'opening' | 'income_in' | 'adjustment_in' | 'adjustment_out' | 'transfer';
+    amount: number;
+    description: string;
+  }) => call<CashMovement>('cash:adjustment', data),
+};
+
+// Dashboard
+export const dashboard = {
+  stats: () => call<DashboardStats>('dashboard:stats'),
 };

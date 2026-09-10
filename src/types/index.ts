@@ -216,3 +216,256 @@ export interface BackupRecord {
   status: string;
   notes: string | null;
 }
+
+// ============== Phase 2 types ==============
+
+export interface Batch {
+  id: string;
+  batch_number: string;
+  kiln_id: string | null;
+  kiln_name?: string;
+  start_date: string;
+  end_date: string | null;
+  status: 'open' | 'firing' | 'completed' | 'closed' | 'cancelled';
+  notes: string | null;
+  labour_cost: number;
+  fuel_cost: number;
+  transport_cost: number;
+  other_cost: number;
+  total_cost: number;
+  raw_bricks_loaded: number;
+  baked_bricks_unloaded: number;
+  broken_quantity: number;
+  sales_revenue: number;
+  profit_loss: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Customer {
+  id: string;
+  customer_code: string;
+  name: string;
+  mobile: string | null;
+  phone: string | null;
+  address: string | null;
+  cnic: string | null;
+  opening_balance: number;
+  credit_limit: number | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  total_sales?: number;
+  total_paid?: number;
+  current_balance?: number;
+}
+
+export interface CustomerLedger {
+  customer: Customer;
+  invoices: Array<{
+    id: string;
+    invoice_number: string;
+    date: string;
+    subtotal: number;
+    discount: number;
+    total: number;
+    paid: number;
+    remaining: number;
+    payment_status: string;
+    is_void: boolean;
+  }>;
+  payments: Array<{
+    id: string;
+    receipt_number: string;
+    date: string;
+    amount: number;
+    payment_method: string;
+    reference_no: string | null;
+  }>;
+  totals: {
+    opening_balance: number;
+    total_sales: number;
+    total_paid: number;
+    current_balance: number;
+  };
+}
+
+export interface SalesInvoiceItem {
+  id: string;
+  invoice_id: string;
+  category_id: string;
+  category_name?: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+}
+
+export interface SalesInvoice {
+  id: string;
+  invoice_number: string;
+  date: string;
+  customer_id: string;
+  customer_name?: string;
+  customer_code?: string;
+  batch_id: string | null;
+  batch_number?: string;
+  subtotal: number;
+  discount: number;
+  total: number;
+  paid: number;
+  remaining: number;
+  payment_method: string | null;
+  payment_status: 'unpaid' | 'partial' | 'paid' | 'overpaid';
+  sales_user_id: string;
+  sales_user_name?: string;
+  notes: string | null;
+  is_void: boolean;
+  void_reason: string | null;
+  voided_by: string | null;
+  voided_at: string | null;
+  created_at: string;
+  updated_at: string;
+  items?: SalesInvoiceItem[];
+}
+
+export interface CustomerPayment {
+  id: string;
+  receipt_number: string;
+  date: string;
+  customer_id: string;
+  customer_name?: string;
+  customer_code?: string;
+  invoice_id: string | null;
+  invoice_number?: string;
+  amount: number;
+  payment_method: 'cash' | 'bank' | 'cheque' | 'other';
+  reference_no: string | null;
+  received_by: string;
+  received_by_name?: string;
+  notes: string | null;
+  is_void: boolean;
+  void_reason: string | null;
+  voided_by: string | null;
+  voided_at: string | null;
+  created_at: string;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  code: string;
+  description: string | null;
+  is_active: boolean;
+}
+
+export interface Expense {
+  id: string;
+  expense_number: string;
+  date: string;
+  category_id: string;
+  category_name?: string;
+  department_id: string | null;
+  department_name?: string;
+  batch_id: string | null;
+  batch_number?: string;
+  amount: number;
+  payment_method: 'cash' | 'bank' | 'cheque' | 'credit' | 'other';
+  reference_no: string | null;
+  paid_to: string | null;
+  paid_by: string;
+  paid_by_name?: string;
+  description: string | null;
+  is_void: boolean;
+  void_reason: string | null;
+  voided_by: string | null;
+  voided_at: string | null;
+  created_at: string;
+}
+
+export interface WorkerAdvance {
+  id: string;
+  advance_number: string;
+  date: string;
+  worker_id: string;
+  worker_name?: string;
+  worker_code?: string;
+  amount: number;
+  payment_method: 'cash' | 'bank' | 'cheque' | 'other';
+  reference_no: string | null;
+  description: string | null;
+  given_by: string;
+  given_by_name?: string;
+  is_void: boolean;
+  void_reason: string | null;
+  voided_by: string | null;
+  voided_at: string | null;
+  created_at: string;
+}
+
+export interface WorkerPayment {
+  id: string;
+  payment_number: string;
+  date: string;
+  worker_id: string;
+  worker_name?: string;
+  worker_code?: string;
+  amount: number;
+  payment_method: 'cash' | 'bank' | 'cheque' | 'other';
+  reference_no: string | null;
+  description: string | null;
+  paid_by: string;
+  paid_by_name?: string;
+  is_void: boolean;
+  void_reason: string | null;
+  voided_by: string | null;
+  voided_at: string | null;
+  created_at: string;
+}
+
+export interface CashMovement {
+  id: string;
+  date: string;
+  movement_type: string;
+  amount: number;
+  reference_type: string | null;
+  reference_id: string | null;
+  description: string | null;
+  entered_by: string | null;
+  entered_by_name?: string;
+  created_at: string;
+}
+
+export interface CashBalance {
+  balance: number;
+  total_in: number;
+  total_out: number;
+  movements_count: number;
+}
+
+export interface DashboardStats {
+  today: {
+    date: string;
+    production_by_stage: Array<{ stage: string; total_qty: number; total_labour: number }>;
+    total_production_qty: number;
+    total_labour: number;
+    sales_count: number;
+    sales_total: number;
+    cash_received: number;
+    expenses_count: number;
+    expenses_total: number;
+  };
+  cash_balance: number;
+  active_workers: number;
+  inactive_workers: number;
+  left_workers: number;
+  active_departments: number;
+  active_batches: number;
+  firing_batches: number;
+  open_invoices_count: number;
+  customer_receivables: number;
+  worker_payable: number;
+  stock_by_category: Array<{ category_id: string; category_name: string; quantity: number }>;
+  kiln_status_breakdown: Array<{ status: string; count: number }>;
+}

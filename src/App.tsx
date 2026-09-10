@@ -15,6 +15,14 @@ import SettingsPage from './pages/SettingsPage';
 import AuditLogPage from './pages/AuditLogPage';
 import BackupPage from './pages/BackupPage';
 import UpdatesPage from './pages/UpdatesPage';
+// Phase 2 pages
+import BatchesPage from './pages/BatchesPage';
+import CustomersPage from './pages/CustomersPage';
+import CustomerDetailPage from './pages/CustomerDetailPage';
+import SalesPage from './pages/SalesPage';
+import ExpensesPage from './pages/ExpensesPage';
+import WorkerPaymentsPage from './pages/WorkerPaymentsPage';
+import CashPage from './pages/CashPage';
 import { ToastContainer } from './components/Toast';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -72,6 +80,13 @@ export default function App() {
           <Route path="workers" element={<RequirePermission code="workers.view"><WorkersPage /></RequirePermission>} />
           <Route path="workers/:id" element={<RequirePermission code="workers.view"><WorkerDetailPage /></RequirePermission>} />
           <Route path="production" element={<RequirePermission code="production.view"><ProductionPage /></RequirePermission>} />
+          <Route path="batches" element={<RequirePermission code="batches.view"><BatchesPage /></RequirePermission>} />
+          <Route path="customers" element={<RequirePermission code="customers.view"><CustomersPage /></RequirePermission>} />
+          <Route path="customers/:id" element={<RequirePermission code="customers.view"><CustomerDetailPage /></RequirePermission>} />
+          <Route path="sales" element={<RequirePermission code="sales.view"><SalesPage /></RequirePermission>} />
+          <Route path="expenses" element={<RequirePermission code="expenses.view"><ExpensesPage /></RequirePermission>} />
+          <Route path="worker-payments" element={<RequirePermission code="worker_payments.view"><WorkerPaymentsPage /></RequirePermission>} />
+          <Route path="cash" element={<RequirePermission code="accounts.view"><CashPage /></RequirePermission>} />
           <Route path="users" element={<RequirePermission code="users.manage"><UsersPage /></RequirePermission>} />
           <Route path="roles" element={<RequirePermission code="roles.manage"><RolesPage /></RequirePermission>} />
           <Route path="settings" element={<RequirePermission code="settings.manage"><SettingsPage /></RequirePermission>} />

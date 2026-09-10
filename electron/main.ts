@@ -29,6 +29,15 @@ import { registerKilnHandlers } from './ipc/kilns';
 import { registerProductionHandlers } from './ipc/production';
 import { registerBackupHandlers } from './ipc/backup';
 import { registerUpdateHandlers } from './ipc/updates';
+// Phase 2 modules
+import { registerBatchHandlers } from './ipc/batches';
+import { registerCustomerHandlers } from './ipc/customers';
+import { registerSalesHandlers } from './ipc/sales';
+import { registerCustomerPaymentHandlers } from './ipc/customerPayments';
+import { registerExpenseHandlers } from './ipc/expenses';
+import { registerWorkerPaymentHandlers } from './ipc/workerPayments';
+import { registerCashHandlers } from './ipc/cash';
+import { registerDashboardHandlers } from './ipc/dashboard';
 
 // Configure logging
 log.transports.file.level = 'info';
@@ -181,6 +190,15 @@ function registerIpcHandlers(): void {
   registerProductionHandlers();
   registerBackupHandlers();
   registerUpdateHandlers();
+  // Phase 2 modules
+  registerBatchHandlers();
+  registerCustomerHandlers();
+  registerSalesHandlers();
+  registerCustomerPaymentHandlers();
+  registerExpenseHandlers();
+  registerWorkerPaymentHandlers();
+  registerCashHandlers();
+  registerDashboardHandlers();
   log.info('[main] All IPC handlers registered.');
 }
 

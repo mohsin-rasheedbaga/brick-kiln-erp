@@ -42,6 +42,26 @@ const ALLOWED_CHANNELS = new Set<string>([
   'backup:create', 'backup:restore', 'backup:list', 'backup:delete',
   // updates
   'update:check', 'update:download', 'update:install', 'update:get-info',
+  // batches (Phase 2)
+  'batches:list', 'batches:get', 'batches:create', 'batches:update',
+  'batches:set-status', 'batches:delete', 'batches:cost-summary',
+  // customers (Phase 2)
+  'customers:list', 'customers:get', 'customers:create', 'customers:update',
+  'customers:set-active', 'customers:delete', 'customers:ledger', 'customers:lookup-by-code',
+  // sales (Phase 2)
+  'sales:list', 'sales:get', 'sales:create', 'sales:void',
+  // customer payments (Phase 2)
+  'customer-payments:list', 'customer-payments:create', 'customer-payments:void',
+  // expenses (Phase 2)
+  'expenses:list', 'expenses:create', 'expenses:void',
+  'expense-categories:list', 'expense-categories:create', 'expense-categories:set-active',
+  // worker advances & payments (Phase 2)
+  'worker-advances:list', 'worker-advances:create', 'worker-advances:void',
+  'worker-payments:list', 'worker-payments:create', 'worker-payments:void',
+  // cash register (Phase 2)
+  'cash:balance', 'cash:movements', 'cash:adjustment',
+  // dashboard (Phase 2)
+  'dashboard:stats',
 ]);
 
 contextBridge.exposeInMainWorld('erp', {
