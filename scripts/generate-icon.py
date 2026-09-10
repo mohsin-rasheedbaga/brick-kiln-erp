@@ -8,8 +8,11 @@ import struct
 import os
 
 def create_brick_icon():
-    """Create a 32x32 RGBA icon: white background with red brick pattern."""
-    W, H = 32, 32
+    """Create a 256x256 RGBA icon: white background with red brick pattern.
+
+    Windows installer requires icons to be at least 256x256.
+    """
+    W, H = 256, 256
     # Brick color (terracotta red): #B91C1C
     brick_color = (185, 28, 28, 255)
     mortar_color = (220, 220, 220, 255)  # light gray for mortar lines
@@ -17,18 +20,19 @@ def create_brick_icon():
 
     # Generate pixel data with brick pattern
     pixels = []
+    brick_h = 32  # brick row height (256/8 = 32)
+    brick_w = 64  # brick width (256/4 = 64)
     for y in range(H):
         row = []
-        # Determine which brick row this is (every 8 pixels = 1 brick row)
-        brick_row = y // 8
-        # Offset pattern (alternating rows offset by 4 pixels)
-        offset = 4 if brick_row % 2 == 1 else 0
+        # Determine which brick row this is
+        brick_row = y // brick_h
+        # Offset pattern (alternating rows offset by half a brick)
+        offset = brick_w // 2 if brick_row % 2 == 1 else 0
         for x in range(W):
-            # Check if this pixel is on a mortar line (vertical or horizontal)
-            is_horizontal_mortar = (y % 8 == 0) or (y % 8 == 7)
-            # Vertical mortar every 16 pixels, offset by row
-            adj_x = (x + offset) % 16
-            is_vertical_mortar = (adj_x == 0) or (adj_x == 15)
+            # Check if this pixel is on a mortar line
+            is_horizontal_mortar = (y % brick_h == 0) or (y % brick_h == brick_h - 1)
+            adj_x = (x + offset) % brick_w
+            is_vertical_mortar = (adj_x == 0) or (adj_x == brick_w - 1)
 
             if is_horizontal_mortar or is_vertical_mortar:
                 row.append(mortar_color)
@@ -76,8 +80,8 @@ def create_brick_icon():
     # width, height (0 = 256), color count (0 = >256), reserved,
     # planes, bitcount, size, offset
     icondirentry = struct.pack('<BBBBHHII',
-        W,           # bWidth (32)
-        H,           # bHeight (32)
+        W if W < 256 else 0,   # bWidth (0 means 256)
+        H if H < 256 else 0,   # bHeight (0 means 256)
         0,           # bColorCount (>256 colors)
         0,           # bReserved
         1,           # wPlanes
@@ -90,14 +94,14 @@ def create_brick_icon():
 
 
 def create_brick_png():
-    """Create a 32x32 PNG version for the Electron window icon."""
+    """Create a 256x256 PNG version for the Electron window icon."""
     # PNG signature
     signature = b'\x89PNG\r\n\x1a\n'
 
-    # IHDR chunk: width=32, height=32, bit_depth=8, color_type=6 (RGBA)
+    # IHDR chunk: width=256, height=256, bit_depth=8, color_type=6 (RGBA)
     import zlib
-    width = 32
-    height = 32
+    width = 256
+    height = 256
     ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
     ihdr_crc = zlib.crc32(b'IHDR' + ihdr_data) & 0xffffffff
     ihdr = struct.pack('>I', 13) + b'IHDR' + ihdr_data + struct.pack('>I', ihdr_crc)
@@ -106,15 +110,17 @@ def create_brick_png():
     brick_color = (185, 28, 28, 255)
     mortar_color = (220, 220, 220, 255)
 
+    brick_h = 32
+    brick_w = 64
     raw_pixels = bytearray()
     for y in range(height):
         raw_pixels.append(0)  # filter type 0 (None) for each row
-        brick_row = y // 8
-        offset = 4 if brick_row % 2 == 1 else 0
+        brick_row = y // brick_h
+        offset = brick_w // 2 if brick_row % 2 == 1 else 0
         for x in range(width):
-            is_horizontal_mortar = (y % 8 == 0) or (y % 8 == 7)
-            adj_x = (x + offset) % 16
-            is_vertical_mortar = (adj_x == 0) or (adj_x == 15)
+            is_horizontal_mortar = (y % brick_h == 0) or (y % brick_h == brick_h - 1)
+            adj_x = (x + offset) % brick_w
+            is_vertical_mortar = (adj_x == 0) or (adj_x == brick_w - 1)
             if is_horizontal_mortar or is_vertical_mortar:
                 r, g, b, a = mortar_color
             else:
