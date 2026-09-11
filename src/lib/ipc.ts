@@ -35,9 +35,31 @@ export function clearToken(): void {
 
 async function call<T>(channel: string, ...args: any[]): Promise<T> {
   const token = getToken();
-  // Inject token at the front of args (most handlers expect it)
-  const fullArgs = [token, ...args];
-  const result = await window.erp.invoke(channel, ...fullArgs);
+
+  // Build the first argument for ipcMain.handle.
+  //
+  // All IPC handlers across this app use the signature:
+  //   ipcMain.handle('channel', async (evt, args) => { ... args.token ... })
+  // i.e. they expect a SINGLE object parameter containing `token` and any
+  // additional fields (search, id, etc.). We must therefore MERGE the token
+  // into the first argument object — NOT prepend it as a separate argument.
+  //
+  // Special case: for auth:login we don't have a token yet (it's null),
+  // but we still pass `token: null` so the handler signature stays consistent.
+  // The auth:login handler ignores args.token and only reads username/password.
+  let firstArg: any;
+  if (args.length === 0) {
+    firstArg = { token };
+  } else if (typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0])) {
+    // Most common case: merge token into the existing args object
+    firstArg = { ...args[0], token };
+  } else {
+    // First arg is a primitive (string/number) — wrap it with token
+    firstArg = { token, value: args[0] };
+  }
+
+  const restArgs = args.slice(1);
+  const result = await window.erp.invoke(channel, firstArg, ...restArgs);
   if (!result || typeof result !== 'object') {
     throw new Error('Invalid IPC response');
   }

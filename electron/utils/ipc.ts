@@ -34,14 +34,10 @@ export function err(code: string, message: string, details?: any): IpcError {
  * Wrap an async IPC handler with try/catch and structured error return.
  *
  * Usage:
- *   ipcMain.handle('foo', wrap(async () => { ... return data; }));
+ *   ipcMain.handle('foo', wrap(async (_evt, args) => { ... return data; }));
  *
- * Note: wrap returns an async function that takes (evt, ...args) and returns
- * Promise<IpcResult<T>>. The handler body throws on error; wrap converts
- * thrown errors into structured IpcError responses.
- *
- * The handler body can access the original (evt, args) via the second parameter:
- *   ipcMain.handle('foo', wrap(async (_evt, args) => { ... }));
+ * wrap returns a function that takes (evt, args) and returns Promise<IpcResult<T>>.
+ * Any thrown error in the handler body is converted to a structured IpcError.
  */
 export function wrap<T>(
   fn: (evt?: any, args?: any) => Promise<T> | T
@@ -52,7 +48,6 @@ export function wrap<T>(
       return ok(data);
     } catch (e: any) {
       const message = e?.message || String(e);
-      // Map common SQLite errors to user-friendly messages
       let code = 'INTERNAL';
       let friendly = message;
 
