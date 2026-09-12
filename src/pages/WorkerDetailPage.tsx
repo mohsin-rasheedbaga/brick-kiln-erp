@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { PageHeader } from '../components/Card';
+import { Modal } from '../components/Modal';
 import { Spinner, EmptyState, ErrorState } from '../components/Feedback';
 import { useToastStore } from '../stores/toast';
-import { workers as workerApi, workTypes as wtApi } from '../lib/ipc';
-import type { WorkerLedger, WorkType } from '../types';
+import {
+  workers as workerApi, workTypes as wtApi,
+  workerFamily as familyApi, workerAccount as accountApi,
+} from '../lib/ipc';
+import type { WorkerLedger, WorkType, WorkerFamily, WorkerAccountSummary } from '../types';
 import { formatCurrency, formatDate, formatNumber } from '../lib/utils';
-import { ArrowLeft, QrCode, Printer, Package, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, QrCode, Printer, Package, Wallet, TrendingUp, TrendingDown, Users2, Pencil } from 'lucide-react';
 import { WorkerCardPrint } from '../components/WorkerCardPrint';
 
 export default function WorkerDetailPage() {
@@ -16,15 +20,24 @@ export default function WorkerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ledger, setLedger] = useState<WorkerLedger | null>(null);
+  const [family, setFamily] = useState<WorkerFamily | null>(null);
+  const [account, setAccount] = useState<WorkerAccountSummary | null>(null);
   const [printing, setPrinting] = useState(false);
+  const [showFamilyModal, setShowFamilyModal] = useState(false);
 
   const load = async () => {
     if (!id) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await workerApi.ledger(id);
+      const [data, fam, acc] = await Promise.all([
+        workerApi.ledger(id),
+        familyApi.get(id),
+        accountApi.summary(id),
+      ]);
       setLedger(data);
+      setFamily(fam);
+      setAccount(acc);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -39,6 +52,8 @@ export default function WorkerDetailPage() {
   if (!ledger) return <EmptyState title="Worker not found" />;
 
   const { worker, production, advances, payments, totals } = ledger;
+  // Use account summary if available (more accurate + includes last activity)
+  const acc = account;
 
   return (
     <div>
@@ -116,7 +131,69 @@ export default function WorkerDetailPage() {
               <div className="flex justify-between items-center"><span className="text-slate-500">QR Token:</span><span className="font-mono text-slate-900 text-[10px] break-all max-w-[60%]">{worker.qr_token}</span></div>
             </div>
           </div>
+
+          {/* Phase 4: Family / Emergency Contact */}
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                <Users2 className="h-3.5 w-3.5" /> Family / Gharana
+              </div>
+              <button
+                onClick={() => setShowFamilyModal(true)}
+                className="text-xs text-brand-600 hover:underline flex items-center gap-1"
+              >
+                <Pencil className="h-3 w-3" /> Edit
+              </button>
+            </div>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between"><span className="text-slate-500">Family Number:</span><span className="font-mono text-slate-900">{family?.family_number || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Contact Name:</span><span className="text-slate-900">{family?.family_contact_name || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Relation:</span><span className="text-slate-900">{family?.relation || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Alt Number:</span><span className="font-mono text-slate-900">{family?.alt_number || '—'}</span></div>
+            </div>
+          </div>
         </div>
+
+        {/* Phase 4: Worker Account Card (live, with last activity) */}
+        {acc && (
+          <div className="card p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Wallet className="h-5 w-5 text-brand-600" />
+              <h2 className="text-base font-semibold text-slate-900">Worker Account</h2>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-slate-500">Total Earned</span><span className="font-mono font-semibold text-emerald-700">{formatCurrency(acc.earned)}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Advances Taken</span><span className="font-mono text-amber-700">{formatCurrency(acc.advances_total)}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Payments Received</span><span className="font-mono text-purple-700">{formatCurrency(acc.payments_total)}</span></div>
+              <div className="border-t border-slate-200 pt-2 mt-2 flex justify-between items-center">
+                <span className="text-slate-700 font-semibold">Current Balance</span>
+                <span className={`font-mono text-lg font-bold ${acc.balance >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                  {formatCurrency(acc.balance)}
+                </span>
+              </div>
+              {acc.balance > 0 && (
+                <p className="text-[10px] text-slate-500 mt-1">Payable to worker (earned − advances − payments)</p>
+              )}
+              {acc.last_activity_date && (
+                <div className="pt-2 mt-2 border-t border-slate-100 text-xs text-slate-500">
+                  <div className="flex justify-between"><span>Last activity:</span><span>{formatDate(acc.last_activity_date)}</span></div>
+                  {acc.last_advance_date && (
+                    <div className="flex justify-between mt-1">
+                      <span>Last advance:</span>
+                      <span>{formatCurrency(acc.last_advance_amount)} on {formatDate(acc.last_advance_date)}</span>
+                    </div>
+                  )}
+                  {acc.last_payment_date && (
+                    <div className="flex justify-between mt-1">
+                      <span>Last payment:</span>
+                      <span>{formatCurrency(acc.last_payment_amount)} on {formatDate(acc.last_payment_date)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Ledger summary */}
         <div className="card p-5 lg:col-span-2">
@@ -245,7 +322,111 @@ export default function WorkerDetailPage() {
       </div>
 
       {printing && <WorkerCardPrint worker={worker} onClose={() => setPrinting(false)} />}
+
+      {showFamilyModal && (
+        <FamilyEditModal
+          workerId={worker.id}
+          initial={family}
+          onClose={() => setShowFamilyModal(false)}
+          onSaved={() => { setShowFamilyModal(false); load(); }}
+        />
+      )}
     </div>
+  );
+}
+
+function FamilyEditModal({ workerId, initial, onClose, onSaved }: {
+  workerId: string;
+  initial: WorkerFamily | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    familyNumber: initial?.family_number ?? '',
+    familyContactName: initial?.family_contact_name ?? '',
+    relation: initial?.relation ?? '',
+    altNumber: initial?.alt_number ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+  const pushToast = useToastStore((s) => s.push);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await familyApi.set(workerId, {
+        familyNumber: form.familyNumber || undefined,
+        familyContactName: form.familyContactName || undefined,
+        relation: form.relation || undefined,
+        altNumber: form.altNumber || undefined,
+      });
+      pushToast('success', 'Family contact saved.');
+      onSaved();
+    } catch (err: any) {
+      pushToast('error', err.message);
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={true}
+      onClose={onClose}
+      title="Family / Emergency Contact (Gharana Number)"
+      size="md"
+      footer={
+        <>
+          <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? <Spinner size="sm" className="border-white" /> : 'Save'}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <div>
+          <label className="label">Family Number (Gharana Number) *</label>
+          <input
+            className="input"
+            value={form.familyNumber}
+            onChange={(e) => setForm({ ...form, familyNumber: e.target.value })}
+            placeholder="03XX-XXXXXXX"
+            autoFocus
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Contact Name</label>
+            <input
+              className="input"
+              value={form.familyContactName}
+              onChange={(e) => setForm({ ...form, familyContactName: e.target.value })}
+              placeholder="e.g. Muhammad Ali (father)"
+            />
+          </div>
+          <div>
+            <label className="label">Relation</label>
+            <input
+              className="input"
+              value={form.relation}
+              onChange={(e) => setForm({ ...form, relation: e.target.value })}
+              placeholder="Father / Brother / Spouse"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="label">Alternative Number</label>
+          <input
+            className="input"
+            value={form.altNumber}
+            onChange={(e) => setForm({ ...form, altNumber: e.target.value })}
+            placeholder="Optional"
+          />
+        </div>
+        <p className="text-xs text-slate-500">
+          This contact will be shown on the worker's card and is used in case of emergency.
+        </p>
+      </div>
+    </Modal>
   );
 }
 

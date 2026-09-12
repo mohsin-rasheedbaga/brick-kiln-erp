@@ -202,8 +202,36 @@ export function registerProductionHandlers(): void {
       const wt = get<{ id: string; default_rate_per_1000: number }>(db, 'SELECT id, default_rate_per_1000 FROM work_types WHERE id = ?', args.workTypeId);
       if (!wt) throw new Error('Work type not found.');
 
-      // Rate: explicit > worker's rate > work type default
-      const rate = args.ratePer1000 !== undefined ? Number(args.ratePer1000) : (worker.rate_per_1000 || wt.default_rate_per_1000);
+      // Rate lookup priority (Phase 4 enhancement):
+      //   1. Explicit rate passed in args.ratePer1000
+      //   2. Department rate specific (dept + work_type + brick_category)
+      //   3. Department rate general (dept + work_type, any category)
+      //   4. Worker's personal rate_per_1000
+      //   5. Work type's default_rate_per_1000
+      let rate: number;
+      if (args.ratePer1000 !== undefined) {
+        rate = Number(args.ratePer1000);
+      } else {
+        // Try department rate (specific + general)
+        let deptRate: { rate_per_1000: number } | undefined;
+        if (args.categoryId) {
+          deptRate = get<{ rate_per_1000: number }>(
+            db,
+            `SELECT rate_per_1000 FROM department_rates
+             WHERE department_id = ? AND work_type_id = ? AND brick_category_id = ? AND is_active = 1`,
+            args.departmentId, args.workTypeId, args.categoryId
+          );
+        }
+        if (!deptRate) {
+          deptRate = get<{ rate_per_1000: number }>(
+            db,
+            `SELECT rate_per_1000 FROM department_rates
+             WHERE department_id = ? AND work_type_id = ? AND brick_category_id IS NULL AND is_active = 1`,
+            args.departmentId, args.workTypeId
+          );
+        }
+        rate = deptRate?.rate_per_1000 ?? (worker.rate_per_1000 || wt.default_rate_per_1000);
+      }
       if (isNaN(rate) || rate < 0) throw new Error('Rate must be a non-negative number.');
 
       const labourAmount = (args.quantity / 1000) * rate;

@@ -504,4 +504,165 @@ export function registerWorkerHandlers(): void {
       return row ? rowToWorker(row) : null;
     })();
   });
+
+  // ============== Phase 4: Worker Family Contact ==============
+
+  ipcMain.handle('workers:get-family', async (_evt, args: { token: string; workerId: string }): Promise<IpcResult<{
+    family_number: string | null;
+    family_contact_name: string | null;
+    relation: string | null;
+    alt_number: string | null;
+  } | null>> => {
+    return wrap(async () => {
+      const session = getSession(args.token);
+      if (!session) throw new Error('Session expired.');
+      if (!session.permissions.includes('workers.view') && session.roleId !== 'role-super-admin') {
+        throw new Error('You do not have permission to view workers.');
+      }
+      const db = getDb();
+      const row = get<any>(db, 'SELECT * FROM worker_family WHERE worker_id = ?', args.workerId);
+      if (!row) return null;
+      return {
+        family_number: row.family_number,
+        family_contact_name: row.family_contact_name,
+        relation: row.relation,
+        alt_number: row.alt_number,
+      };
+    })();
+  });
+
+  ipcMain.handle('workers:set-family', async (_evt, args: {
+    token: string;
+    workerId: string;
+    familyNumber?: string;
+    familyContactName?: string;
+    relation?: string;
+    altNumber?: string;
+  }): Promise<IpcResult<{ success: true }>> => {
+    return wrap(async () => {
+      const session = getSession(args.token);
+      if (!session) throw new Error('Session expired.');
+      if (!session.permissions.includes('workers.edit') && session.roleId !== 'role-super-admin') {
+        throw new Error('You do not have permission to edit workers.');
+      }
+      const db = getDb();
+      const w = get<{ id: string }>(db, 'SELECT id FROM workers WHERE id = ?', args.workerId);
+      if (!w) throw new Error('Worker not found.');
+      transaction(db, () => {
+        run(
+          db,
+          `INSERT INTO worker_family (id, worker_id, family_number, family_contact_name, relation, alt_number, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+           ON CONFLICT(worker_id) DO UPDATE SET
+             family_number = excluded.family_number,
+             family_contact_name = excluded.family_contact_name,
+             relation = excluded.relation,
+             alt_number = excluded.alt_number,
+             updated_at = datetime('now')`,
+          uuidv4(), args.workerId,
+          args.familyNumber ?? null,
+          args.familyContactName ?? null,
+          args.relation ?? null,
+          args.altNumber ?? null
+        );
+        audit({
+          userId: session.userId,
+          username: session.username,
+          action: 'update',
+          module: 'workers',
+          entityId: args.workerId,
+          entityType: 'worker_family',
+          description: `Updated family contact for worker`,
+          newValues: { family_number: args.familyNumber, family_contact_name: args.familyContactName, relation: args.relation },
+        });
+      });
+      return { success: true } as const;
+    })();
+  });
+
+  // ============== Phase 4: Worker Account Summary (card-style) ==============
+  // Returns the live worker account for printing on a card or showing in UI.
+  ipcMain.handle('workers:account-summary', async (_evt, args: { token: string; workerId: string }): Promise<IpcResult<{
+    worker: Worker;
+    family: { family_number: string | null; family_contact_name: string | null; relation: string | null; alt_number: string | null; } | null;
+    earned: number;
+    advances_total: number;
+    payments_total: number;
+    balance: number;             // earned - advances - payments (positive = payable to worker)
+    last_activity_date: string | null;
+    last_advance_amount: number;
+    last_advance_date: string | null;
+    last_payment_amount: number;
+    last_payment_date: string | null;
+    total_production_qty: number;
+  }>> => {
+    return wrap(async () => {
+      const session = getSession(args.token);
+      if (!session) throw new Error('Session expired.');
+      if (!session.permissions.includes('workers.view') && session.roleId !== 'role-super-admin') {
+        throw new Error('You do not have permission to view workers.');
+      }
+      const db = getDb();
+      const workerRow = get<any>(db, `${WORKER_SELECT} WHERE w.id = ?`, args.workerId);
+      if (!workerRow) throw new Error('Worker not found.');
+
+      const earnedRow = get<{ total: number; qty: number }>(
+        db,
+        `SELECT COALESCE(SUM(labour_amount), 0) AS total, COALESCE(SUM(quantity), 0) AS qty FROM production_entries WHERE worker_id = ?`,
+        args.workerId
+      );
+      const advRow = get<{ total: number; last_amount: number; last_date: string }>(
+        db,
+        `SELECT COALESCE(SUM(amount), 0) AS total,
+                (SELECT amount FROM worker_advances WHERE worker_id = ? AND is_void = 0 ORDER BY date DESC LIMIT 1) AS last_amount,
+                (SELECT date FROM worker_advances WHERE worker_id = ? AND is_void = 0 ORDER BY date DESC LIMIT 1) AS last_date
+         FROM worker_advances WHERE worker_id = ? AND is_void = 0`,
+        args.workerId, args.workerId, args.workerId
+      );
+      const payRow = get<{ total: number; last_amount: number; last_date: string }>(
+        db,
+        `SELECT COALESCE(SUM(amount), 0) AS total,
+                (SELECT amount FROM worker_payments WHERE worker_id = ? AND is_void = 0 ORDER BY date DESC LIMIT 1) AS last_amount,
+                (SELECT date FROM worker_payments WHERE worker_id = ? AND is_void = 0 ORDER BY date DESC LIMIT 1) AS last_date
+         FROM worker_payments WHERE worker_id = ? AND is_void = 0`,
+        args.workerId, args.workerId, args.workerId
+      );
+      const lastActRow = get<{ d: string }>(
+        db,
+        `SELECT MAX(d) AS d FROM (
+          SELECT date AS d FROM production_entries WHERE worker_id = ?
+          UNION ALL
+          SELECT date FROM worker_advances WHERE worker_id = ? AND is_void = 0
+          UNION ALL
+          SELECT date FROM worker_payments WHERE worker_id = ? AND is_void = 0
+        )`,
+        args.workerId, args.workerId, args.workerId
+      );
+      const fam = get<any>(db, 'SELECT * FROM worker_family WHERE worker_id = ?', args.workerId);
+
+      const earned = earnedRow?.total ?? 0;
+      const advances = advRow?.total ?? 0;
+      const payments = payRow?.total ?? 0;
+
+      return {
+        worker: rowToWorker(workerRow),
+        family: fam ? {
+          family_number: fam.family_number,
+          family_contact_name: fam.family_contact_name,
+          relation: fam.relation,
+          alt_number: fam.alt_number,
+        } : null,
+        earned,
+        advances_total: advances,
+        payments_total: payments,
+        balance: earned - advances - payments,
+        last_activity_date: lastActRow?.d ?? null,
+        last_advance_amount: advRow?.last_amount ?? 0,
+        last_advance_date: advRow?.last_date ?? null,
+        last_payment_amount: payRow?.last_amount ?? 0,
+        last_payment_date: payRow?.last_date ?? null,
+        total_production_qty: earnedRow?.qty ?? 0,
+      };
+    })();
+  });
 }

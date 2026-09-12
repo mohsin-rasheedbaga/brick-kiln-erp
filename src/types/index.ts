@@ -503,3 +503,42 @@ export interface StockMovement {
   entered_by_name?: string;
   created_at: string;
 }
+
+// ============== Phase 4 types ==============
+
+export interface DepartmentRate {
+  id: string;
+  department_id: string;
+  department_name?: string;
+  work_type_id: string;
+  work_type_name?: string;
+  brick_category_id: string | null;
+  brick_category_name?: string | null;
+  rate_per_1000: number;
+  is_active: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkerFamily {
+  family_number: string | null;
+  family_contact_name: string | null;
+  relation: string | null;
+  alt_number: string | null;
+}
+
+export interface WorkerAccountSummary {
+  worker: Worker;
+  family: WorkerFamily | null;
+  earned: number;
+  advances_total: number;
+  payments_total: number;
+  balance: number;
+  last_activity_date: string | null;
+  last_advance_amount: number;
+  last_advance_date: string | null;
+  last_payment_amount: number;
+  last_payment_date: string | null;
+  total_production_qty: number;
+}

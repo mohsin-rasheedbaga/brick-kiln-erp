@@ -5,11 +5,11 @@ import { Spinner, EmptyState } from '../components/Feedback';
 import { useToastStore } from '../stores/toast';
 import {
   sales as salesApi, customers as custApi, batches as batchApi,
-  brickCategories as catApi,
+  brickCategories as catApi, stock as stockApi,
 } from '../lib/ipc';
-import type { SalesInvoice, Customer, Batch, BrickCategory } from '../types';
+import type { SalesInvoice, Customer, Batch, BrickCategory, StockBalance } from '../types';
 import { formatCurrency, formatDate, formatNumber } from '../lib/utils';
-import { Plus, Eye, Ban, Search, FileText, Trash2, Plus as PlusIcon } from 'lucide-react';
+import { Plus, Eye, Ban, Search, FileText, Trash2, Plus as PlusIcon, Boxes } from 'lucide-react';
 
 export default function SalesPage() {
   const [items, setItems] = useState<SalesInvoice[]>([]);
@@ -21,25 +21,33 @@ export default function SalesPage() {
   const [showModal, setShowModal] = useState(false);
   const [viewing, setViewing] = useState<SalesInvoice | null>(null);
   const [voidTarget, setVoidTarget] = useState<SalesInvoice | null>(null);
+  const [stockBalance, setStockBalance] = useState<StockBalance[]>([]);
   const pageSize = 25;
   const pushToast = useToastStore((s) => s.push);
 
   const load = async () => {
     setLoading(true);
     try {
-      const r = await salesApi.list({
-        search: search || undefined,
-        status: statusFilter || undefined,
-        limit: pageSize,
-        offset: page * pageSize,
-      });
+      const [r, stock] = await Promise.all([
+        salesApi.list({
+          search: search || undefined,
+          status: statusFilter || undefined,
+          limit: pageSize,
+          offset: page * pageSize,
+        }),
+        stockApi.balance(),
+      ]);
       setItems(r.items);
       setTotal(r.total);
+      setStockBalance(stock);
     } catch (err: any) { pushToast('error', err.message); }
     finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, [search, statusFilter, page]);
+
+  const totalStock = stockBalance.reduce((s, b) => s + b.quantity, 0);
+  const totalStockValue = stockBalance.reduce((s, b) => s + (b.quantity * b.default_selling_rate), 0);
 
   return (
     <div>
@@ -52,6 +60,34 @@ export default function SalesPage() {
           </button>
         }
       />
+
+      {/* Baked Brick Stock Panel */}
+      <div className="card p-4 mb-4 bg-emerald-50 border-emerald-200">
+        <div className="flex items-center gap-3 mb-3">
+          <Boxes className="h-5 w-5 text-emerald-700" />
+          <div className="flex-1">
+            <h2 className="text-base font-semibold text-emerald-900">Baked Brick Stock on Hand</h2>
+            <p className="text-xs text-emerald-700">
+              {formatNumber(totalStock)} bricks · Est. value: {formatCurrency(totalStockValue)}
+            </p>
+          </div>
+        </div>
+        {stockBalance.length === 0 ? (
+          <p className="text-sm text-emerald-700 text-center py-2">No stock available. Record production entries (baked brick unloading) to add stock.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {stockBalance.map((s) => (
+              <div key={s.category_id} className={`p-3 rounded-md border ${s.quantity > 0 ? 'bg-white border-emerald-200' : 'bg-slate-100 border-slate-200 opacity-60'}`}>
+                <div className="text-xs text-slate-500 uppercase tracking-wider">{s.category_name}</div>
+                <div className={`text-lg font-bold ${s.quantity > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>
+                  {formatNumber(s.quantity)}
+                </div>
+                <div className="text-[10px] text-slate-400">@ {formatCurrency(s.default_selling_rate)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="card p-3 mb-4">
         <div className="flex flex-wrap gap-3">

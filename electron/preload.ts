@@ -68,6 +68,11 @@ const ALLOWED_CHANNELS = new Set<string>([
   'reports:production', 'reports:sales', 'reports:expenses', 'reports:customers',
   'reports:workers', 'reports:batch-costing', 'reports:profit-loss',
   'reports:cash-flow', 'reports:stock',
+  // department rates (Phase 4)
+  'department-rates:list', 'department-rates:get-by-context', 'department-rates:upsert',
+  'department-rates:delete', 'department-rates:matrix',
+  // worker family + account summary (Phase 4)
+  'workers:get-family', 'workers:set-family', 'workers:account-summary',
 ]);
 
 contextBridge.exposeInMainWorld('erp', {

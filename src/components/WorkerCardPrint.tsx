@@ -31,6 +31,8 @@ interface Props {
 
 export function WorkerCardPrint({ worker, onClose }: Props) {
   const [barcodeDataUrl, setBarcodeDataUrl] = useState<string>('');
+  const [familyNumber, setFamilyNumber] = useState<string | null>(null);
+  const [accountBalance, setAccountBalance] = useState<number | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
@@ -54,14 +56,27 @@ export function WorkerCardPrint({ worker, onClose }: Props) {
         const barcodeUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
 
         // Generate QR code
-        // We embed ONLY the qr_token, not the worker ID or any PII.
-        // The scanner app will look up the worker by qr_token via IPC.
         const qrUrl = await QRCode.toDataURL(worker.qr_token, {
           errorCorrectionLevel: 'M',
           margin: 1,
           width: 180,
           color: { dark: '#0f172a', light: '#ffffff' },
         });
+
+        // Phase 4: Load family number + account balance in parallel
+        try {
+          const { workerFamily, workerAccount } = await import('../lib/ipc');
+          const [fam, acc] = await Promise.all([
+            workerFamily.get(worker.id),
+            workerAccount.summary(worker.id),
+          ]);
+          if (mounted) {
+            setFamilyNumber(fam?.family_number ?? null);
+            setAccountBalance(acc.balance);
+          }
+        } catch (e) {
+          // Not critical — card still prints without these
+        }
 
         if (mounted) {
           setBarcodeDataUrl(barcodeUrl);
@@ -128,6 +143,16 @@ export function WorkerCardPrint({ worker, onClose }: Props) {
                   <div className="text-slate-500">Code: <span className="font-mono font-bold text-slate-900">{worker.worker_code}</span></div>
                   <div className="text-slate-500">Dept: <span className="font-semibold text-slate-900">{worker.department_name || '—'}</span></div>
                   <div className="text-slate-500">Work: <span className="font-semibold text-slate-900">{worker.work_type_name || '—'}</span></div>
+                  {familyNumber && (
+                    <div className="text-slate-500">Gharana: <span className="font-mono text-slate-900">{familyNumber}</span></div>
+                  )}
+                  {accountBalance !== null && (
+                    <div className="text-slate-500">
+                      Bal: <span className={`font-mono font-bold ${accountBalance >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                        Rs. {accountBalance.toFixed(0)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* Right: QR code */}

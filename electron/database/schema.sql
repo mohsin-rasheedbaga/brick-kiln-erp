@@ -184,6 +184,44 @@ CREATE TABLE IF NOT EXISTS work_types (
 );
 
 -- ============================================================
+-- 7B. DEPARTMENT RATES (configurable per department × brick grade × work type)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS department_rates (
+  id                TEXT PRIMARY KEY,
+  department_id     TEXT NOT NULL,
+  work_type_id      TEXT NOT NULL,
+  brick_category_id TEXT,                    -- nullable: if NULL, rate applies to all grades
+  rate_per_1000     REAL NOT NULL DEFAULT 0,
+  is_active         INTEGER NOT NULL DEFAULT 1,
+  notes             TEXT,
+  created_by        TEXT,
+  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
+  FOREIGN KEY (work_type_id) REFERENCES work_types(id) ON DELETE CASCADE,
+  FOREIGN KEY (brick_category_id) REFERENCES brick_categories(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE (department_id, work_type_id, brick_category_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dept_rates_dept ON department_rates(department_id);
+CREATE INDEX IF NOT EXISTS idx_dept_rates_work ON department_rates(work_type_id);
+
+-- ============================================================
+-- 7C. WORKER FAMILY CONTACT (Phase 4 addition)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS worker_family (
+  id              TEXT PRIMARY KEY,
+  worker_id       TEXT NOT NULL UNIQUE,
+  family_number   TEXT,                      -- emergency contact phone (gharana number)
+  family_contact_name TEXT,                  -- name of the contact person
+  relation        TEXT,                      -- e.g. 'Father', 'Brother', 'Spouse'
+  alt_number      TEXT,                      -- alternative phone
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE CASCADE
+);
+
+-- ============================================================
 -- 8. KILNS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS kilns (

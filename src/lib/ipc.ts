@@ -19,6 +19,8 @@ import type {
   WorkerAdvance, WorkerPayment, CashMovement, CashBalance, DashboardStats,
   // Phase 3 types
   StockBalance, StockMovement as StockMovementType,
+  // Phase 4 types
+  DepartmentRate, WorkerFamily, WorkerAccountSummary,
 } from '../types';
 
 const TOKEN_KEY = 'brick-kiln-erp-token';
@@ -413,4 +415,39 @@ export const reports = {
     call<{ summary: any; by_type: any[]; movements: any[] }>('reports:cash-flow', filters),
   stock: (filters: { from?: string; to?: string; categoryId?: string } = {}) =>
     call<{ summary: any; categories: any[]; movements_summary: any[] }>('reports:stock', filters),
+};
+
+// =================== Phase 4 APIs ===================
+
+// Department rates
+export const departmentRates = {
+  list: (filters: { departmentId?: string; workTypeId?: string; brickCategoryId?: string | null; includeInactive?: boolean } = {}) =>
+    call<DepartmentRate[]>('department-rates:list', filters),
+  getByContext: (departmentId: string, workTypeId: string, brickCategoryId?: string) =>
+    call<{ rate_per_1000: number; source: string; rate_id: string | null }>('department-rates:get-by-context', { departmentId, workTypeId, brickCategoryId }),
+  upsert: (data: {
+    departmentId: string;
+    workTypeId: string;
+    brickCategoryId?: string | null;
+    ratePer1000: number;
+    notes?: string;
+  }) => call<DepartmentRate>('department-rates:upsert', data),
+  delete: (id: string) => call<{ success: true }>('department-rates:delete', { id }),
+  matrix: (departmentId?: string) =>
+    call<{ departments: any[]; work_types: any[]; categories: any[]; rates: DepartmentRate[] }>('department-rates:matrix', { departmentId }),
+};
+
+// Worker family + account summary (Phase 4 additions to workers)
+export const workerFamily = {
+  get: (workerId: string) => call<WorkerFamily | null>('workers:get-family', { workerId }),
+  set: (workerId: string, data: {
+    familyNumber?: string;
+    familyContactName?: string;
+    relation?: string;
+    altNumber?: string;
+  }) => call<{ success: true }>('workers:set-family', { workerId, ...data }),
+};
+
+export const workerAccount = {
+  summary: (workerId: string) => call<WorkerAccountSummary>('workers:account-summary', { workerId }),
 };
