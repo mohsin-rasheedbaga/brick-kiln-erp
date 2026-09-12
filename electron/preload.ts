@@ -73,6 +73,8 @@ const ALLOWED_CHANNELS = new Set<string>([
   'department-rates:delete', 'department-rates:matrix',
   // worker family + account summary (Phase 4)
   'workers:get-family', 'workers:set-family', 'workers:account-summary',
+  // daily production summary (Phase A)
+  'reports:daily-summary',
 ]);
 
 contextBridge.exposeInMainWorld('erp', {

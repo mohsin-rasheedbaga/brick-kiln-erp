@@ -21,6 +21,8 @@ import type {
   StockBalance, StockMovement as StockMovementType,
   // Phase 4 types
   DepartmentRate, WorkerFamily, WorkerAccountSummary,
+  // Phase A types
+  DailyProductionSummary,
 } from '../types';
 
 const TOKEN_KEY = 'brick-kiln-erp-token';
@@ -450,4 +452,11 @@ export const workerFamily = {
 
 export const workerAccount = {
   summary: (workerId: string) => call<WorkerAccountSummary>('workers:account-summary', { workerId }),
+};
+
+// =================== Phase A APIs ===================
+
+// Daily production summary (today or any date)
+export const dailySummary = {
+  get: (date?: string) => call<DailyProductionSummary>('reports:daily-summary', { date }),
 };

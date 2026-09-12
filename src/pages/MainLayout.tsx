@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Boxes, Building2, Package, ShieldCheck,
   Settings as SettingsIcon, History, DatabaseBackup, RefreshCw, LogOut,
   Menu, X, UserCircle, ChevronDown, ShoppingCart, Wallet, Users2,
-  BarChart3, Package as PackageIcon, Tags,
+  BarChart3, Package as PackageIcon, Tags, CalendarCheck,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toast';
@@ -23,6 +23,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   // Operations
   { to: '/dashboard',         label: 'Dashboard',       icon: LayoutDashboard, permission: 'dashboard.view', group: 'Operations' },
+  { to: '/daily-summary',     label: 'Daily Summary',    icon: CalendarCheck,  permission: 'dashboard.view', group: 'Operations' },
   { to: '/production',        label: 'Production',       icon: Package,         permission: 'production.view', group: 'Operations' },
   { to: '/batches',           label: 'Batches',          icon: Boxes,           permission: 'batches.view', group: 'Operations' },
   { to: '/workers',           label: 'Workers',          icon: Users,           permission: 'workers.view', group: 'Operations' },

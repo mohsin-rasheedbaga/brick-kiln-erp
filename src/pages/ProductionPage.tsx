@@ -6,7 +6,8 @@ import { useToastStore } from '../stores/toast';
 import { production as prodApi, workers as workerApi, departments as deptApi, workTypes as wtApi, kilns as kilnApi, brickCategories as catApi } from '../lib/ipc';
 import type { ProductionEntry, Worker, Department, WorkType, Kiln, BrickCategory } from '../types';
 import { formatCurrency, formatDate, formatNumber } from '../lib/utils';
-import { Plus, Filter } from 'lucide-react';
+import { Plus, Filter, ScanLine } from 'lucide-react';
+import { WorkerScanModal, QuickProductionEntry } from '../components/WorkerScanModal';
 
 const STAGES = [
   { value: 'raw_brick_making',       label: 'Raw Brick Making' },
@@ -24,6 +25,8 @@ export default function ProductionPage() {
   const [page, setPage] = useState(0);
   const pageSize = 25;
   const [showModal, setShowModal] = useState(false);
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [scannedWorker, setScannedWorker] = useState<Worker | null>(null);
 
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -78,9 +81,14 @@ export default function ProductionPage() {
         title="Production"
         subtitle="Record and track brick production across all stages"
         actions={
-          <button className="btn-primary" onClick={() => setShowModal(true)}>
-            <Plus className="h-4 w-4" /> New Entry
-          </button>
+          <>
+            <button className="btn-secondary" onClick={() => setShowScanModal(true)}>
+              <ScanLine className="h-4 w-4" /> Scan Worker Card
+            </button>
+            <button className="btn-primary" onClick={() => setShowModal(true)}>
+              <Plus className="h-4 w-4" /> New Entry
+            </button>
+          </>
         }
       />
 
@@ -155,6 +163,28 @@ export default function ProductionPage() {
           categories={categories}
           onClose={() => setShowModal(false)}
           onSaved={() => { setShowModal(false); load(); }}
+        />
+      )}
+
+      {showScanModal && (
+        <WorkerScanModal
+          open={showScanModal}
+          onClose={() => setShowScanModal(false)}
+          onWorkerFound={(w) => {
+            setShowScanModal(false);
+            setScannedWorker(w);
+          }}
+        />
+      )}
+
+      {scannedWorker && (
+        <QuickProductionEntry
+          worker={scannedWorker}
+          workTypes={workTypes}
+          departments={departments}
+          categories={categories}
+          onClose={() => setScannedWorker(null)}
+          onSaved={() => { setScannedWorker(null); load(); }}
         />
       )}
     </div>

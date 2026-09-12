@@ -542,3 +542,45 @@ export interface WorkerAccountSummary {
   last_payment_date: string | null;
   total_production_qty: number;
 }
+
+// ============== Phase A (v1.4.0) types ==============
+
+export interface DailyStageSummary {
+  stage: string;
+  stage_label: string;
+  total_qty: number;
+  total_labour: number;
+  entries_count: number;
+  unique_workers: number;
+}
+
+export interface DailyProductionSummary {
+  date: string;
+  stages: DailyStageSummary[];
+  total_qty: number;
+  total_labour: number;
+  total_entries: number;
+  total_workers_active: number;
+  top_workers: Array<{
+    worker_id: string;
+    worker_code: string;
+    worker_name: string;
+    department_name: string;
+    total_qty: number;
+    total_labour: number;
+  }>;
+  stock_snapshot: Array<{
+    category_id: string;
+    category_name: string;
+    quantity: number;
+  }>;
+  active_batches: number;
+  firing_batches: number;
+  by_department: Array<{
+    department_id: string;
+    department_name: string;
+    total_qty: number;
+    total_labour: number;
+    entries_count: number;
+  }>;
+}
