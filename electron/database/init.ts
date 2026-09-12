@@ -14,7 +14,7 @@ import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import log from 'electron-log';
 import { app } from 'electron';
-import { getDb, execSql, get, run, transaction } from './connection';
+import { getDb, execSql, get, all, run, transaction } from './connection';
 
 const SCHEMA_VERSION = '1.0.0';
 
@@ -174,11 +174,22 @@ function runMigrations(): void {
 
   log.info(`[db-init] Current schema version: ${currentVersion}`);
 
-  // Example for future migration:
-  // if (semver.lt(currentVersion, '1.1.0')) {
-  //   execSql(db, readSqlFile('migrations/v1.1.0.sql'));
-  //   run(db, "UPDATE app_meta SET value = '1.1.0', updated_at = datetime('now') WHERE key = 'schema_version'");
-  // }
+  // Migration v1.5.0: add payroll_cycle + daily_wage columns to workers table
+  // (existing databases won't have these columns since schema.sql only runs on fresh DBs)
+  try {
+    const cols = all<{ name: string }>(db, "PRAGMA table_info(workers)");
+    const colNames = new Set(cols.map((c) => c.name));
+    if (!colNames.has('payroll_cycle')) {
+      log.info('[db-init] Migration v1.5.0: adding workers.payroll_cycle column');
+      db.exec("ALTER TABLE workers ADD COLUMN payroll_cycle TEXT NOT NULL DEFAULT 'weekly' CHECK (payroll_cycle IN ('weekly','monthly','daily'))");
+    }
+    if (!colNames.has('daily_wage')) {
+      log.info('[db-init] Migration v1.5.0: adding workers.daily_wage column');
+      db.exec("ALTER TABLE workers ADD COLUMN daily_wage REAL NOT NULL DEFAULT 0");
+    }
+  } catch (err) {
+    log.warn('[db-init] Migration v1.5.0 (workers columns) error:', err);
+  }
 
   // Ensure schema_version is set to the latest
   run(db, "INSERT INTO app_meta (key, value, updated_at) VALUES ('schema_version', ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')", SCHEMA_VERSION);

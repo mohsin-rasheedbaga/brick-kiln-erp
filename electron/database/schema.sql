@@ -154,6 +154,9 @@ CREATE TABLE IF NOT EXISTS workers (
   qr_token        TEXT NOT NULL UNIQUE,     -- token used inside QR (mapped to worker_id at scan)
   notes           TEXT,
   left_date       TEXT,
+  payroll_cycle   TEXT NOT NULL DEFAULT 'weekly'
+                    CHECK (payroll_cycle IN ('weekly','monthly','daily')),
+  daily_wage      REAL NOT NULL DEFAULT 0,       -- optional fixed daily wage (if not piece-rate)
   created_by      TEXT,
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
@@ -649,3 +652,79 @@ INSERT OR IGNORE INTO app_meta (key, value) VALUES ('schema_version', '1.0.0');
 INSERT OR IGNORE INTO app_meta (key, value) VALUES ('app_version', '1.0.0');
 INSERT OR IGNORE INTO app_meta (key, value) VALUES ('installed_at', datetime('now'));
 INSERT OR IGNORE INTO app_meta (key, value) VALUES ('first_run', '1');
+
+-- ============================================================
+-- 24. PAYROLL RUNS (Phase B - v1.5.0)
+-- ============================================================
+-- A payroll run is a batch operation that calculates net payable for
+-- multiple workers in one go, then optionally creates worker_payments
+-- for each. The accountant can choose weekly or monthly cycle, and
+-- can adjust each worker's payment before posting.
+CREATE TABLE IF NOT EXISTS payroll_runs (
+  id              TEXT PRIMARY KEY,
+  run_number      TEXT NOT NULL UNIQUE,          -- e.g. 'PR-2026-0001'
+  cycle_type     TEXT NOT NULL
+                    CHECK (cycle_type IN ('weekly','monthly','daily','custom')),
+  period_start    TEXT NOT NULL,
+  period_end      TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'draft'
+                    CHECK (status IN ('draft','posted','void')),
+  total_earned    REAL NOT NULL DEFAULT 0,
+  total_advances  REAL NOT NULL DEFAULT 0,
+  total_previous_balance REAL NOT NULL DEFAULT 0,
+  total_net_payable REAL NOT NULL DEFAULT 0,
+  total_paid      REAL NOT NULL DEFAULT 0,
+  workers_count   INTEGER NOT NULL DEFAULT 0,
+  payment_method  TEXT NOT NULL DEFAULT 'cash'
+                    CHECK (payment_method IN ('cash','bank','cheque','other')),
+  notes           TEXT,
+  created_by      TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  posted_at       TEXT,
+  posted_by       TEXT,
+  voided_at       TEXT,
+  voided_by       TEXT,
+  void_reason     TEXT,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (posted_by) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (voided_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_runs_status ON payroll_runs(status);
+CREATE INDEX IF NOT EXISTS idx_payroll_runs_period ON payroll_runs(period_start, period_end);
+CREATE INDEX IF NOT EXISTS idx_payroll_runs_cycle ON payroll_runs(cycle_type);
+
+-- Per-worker line items in a payroll run.
+-- Each row captures the calculation snapshot at the time of the run:
+--   days worked (distinct dates with production entries)
+--   total quantity produced
+--   earned (sum of labour_amount)
+--   advances during the period
+--   previous balance (earned − advances − payments BEFORE this run's period)
+--   net payable = earned_in_period + previous_balance − advances_in_period
+--   payment_amount — what the accountant actually decided to pay
+--   worker_payment_id — FK to worker_payments if posted
+CREATE TABLE IF NOT EXISTS payroll_run_items (
+  id                TEXT PRIMARY KEY,
+  run_id            TEXT NOT NULL,
+  worker_id         TEXT NOT NULL,
+  days_worked       INTEGER NOT NULL DEFAULT 0,
+  total_qty         INTEGER NOT NULL DEFAULT 0,
+  earned_in_period  REAL NOT NULL DEFAULT 0,
+  advances_in_period REAL NOT NULL DEFAULT 0,
+  previous_balance  REAL NOT NULL DEFAULT 0,
+  net_payable       REAL NOT NULL DEFAULT 0,
+  payment_amount    REAL NOT NULL DEFAULT 0,
+  is_selected       INTEGER NOT NULL DEFAULT 1,  -- accountant can deselect workers
+  notes             TEXT,
+  worker_payment_id TEXT,                        -- set when posted
+  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (run_id) REFERENCES payroll_runs(id) ON DELETE CASCADE,
+  FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE CASCADE,
+  FOREIGN KEY (worker_payment_id) REFERENCES worker_payments(id) ON DELETE SET NULL,
+  UNIQUE (run_id, worker_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_items_run ON payroll_run_items(run_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_items_worker ON payroll_run_items(worker_id);

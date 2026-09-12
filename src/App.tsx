@@ -28,6 +28,7 @@ import StockPage from './pages/StockPage';
 import ReportsPage from './pages/ReportsPage';
 import RatesPage from './pages/RatesPage';
 import DailySummaryPage from './pages/DailySummaryPage';
+import PayrollPage from './pages/PayrollPage';
 import { ToastContainer } from './components/Toast';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -96,6 +97,7 @@ export default function App() {
           <Route path="reports" element={<RequirePermission code="reports.view"><ReportsPage /></RequirePermission>} />
           <Route path="daily-summary" element={<RequirePermission code="dashboard.view"><DailySummaryPage /></RequirePermission>} />
           <Route path="rates" element={<RequirePermission code="settings.manage"><RatesPage /></RequirePermission>} />
+          <Route path="payroll" element={<RequirePermission code="worker_payments.view"><PayrollPage /></RequirePermission>} />
           <Route path="users" element={<RequirePermission code="users.manage"><UsersPage /></RequirePermission>} />
           <Route path="roles" element={<RequirePermission code="roles.manage"><RolesPage /></RequirePermission>} />
           <Route path="settings" element={<RequirePermission code="settings.manage"><SettingsPage /></RequirePermission>} />

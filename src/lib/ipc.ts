@@ -23,6 +23,8 @@ import type {
   DepartmentRate, WorkerFamily, WorkerAccountSummary,
   // Phase A types
   DailyProductionSummary,
+  // Phase B types
+  PayrollRun, PayrollRunItem,
 } from '../types';
 
 const TOKEN_KEY = 'brick-kiln-erp-token';
@@ -459,4 +461,31 @@ export const workerAccount = {
 // Daily production summary (today or any date)
 export const dailySummary = {
   get: (date?: string) => call<DailyProductionSummary>('reports:daily-summary', { date }),
+};
+
+// =================== Phase B APIs (Payroll) ===================
+
+export const payroll = {
+  createRun: (data: {
+    cycleType: 'weekly' | 'monthly' | 'daily' | 'custom';
+    periodStart: string;
+    periodEnd: string;
+    paymentMethod?: string;
+    departmentId?: string;
+    cycleFilter?: 'weekly' | 'monthly' | 'daily' | 'all';
+    notes?: string;
+  }) => call<PayrollRun>('payroll:create-run', data),
+  getRun: (id: string) => call<{ run: PayrollRun; items: PayrollRunItem[] }>('payroll:get-run', { id }),
+  listRuns: (filters: { status?: string; cycleType?: string; limit?: number; offset?: number } = {}) =>
+    call<{ items: PayrollRun[]; total: number }>('payroll:list-runs', filters),
+  updateItem: (itemId: string, changes: {
+    paymentAmount?: number;
+    isSelected?: boolean;
+    notes?: string;
+  }) => call<{ success: true }>('payroll:update-item', { itemId, ...changes }),
+  postRun: (id: string) => call<{ posted_count: number; total_paid: number }>('payroll:post-run', { id }),
+  voidRun: (id: string, reason: string) => call<{ success: true; voided_count: number }>('payroll:void-run', { id, reason }),
+  deleteRun: (id: string) => call<{ success: true }>('payroll:delete-run', { id }),
+  setWorkerCycle: (workerId: string, cycle: 'weekly' | 'monthly' | 'daily', dailyWage?: number) =>
+    call<{ success: true }>('payroll:set-worker-cycle', { workerId, cycle, dailyWage }),
 };

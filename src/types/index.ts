@@ -75,6 +75,8 @@ export interface Worker {
   qr_token: string;
   notes: string | null;
   left_date: string | null;
+  payroll_cycle?: 'weekly' | 'monthly' | 'daily';
+  daily_wage?: number;
   created_at: string;
   updated_at: string;
 }
@@ -583,4 +585,52 @@ export interface DailyProductionSummary {
     total_labour: number;
     entries_count: number;
   }>;
+}
+
+// ============== Phase B (v1.5.0) types ==============
+
+export interface PayrollRun {
+  id: string;
+  run_number: string;
+  cycle_type: 'weekly' | 'monthly' | 'daily' | 'custom';
+  period_start: string;
+  period_end: string;
+  status: 'draft' | 'posted' | 'void';
+  total_earned: number;
+  total_advances: number;
+  total_previous_balance: number;
+  total_net_payable: number;
+  total_paid: number;
+  workers_count: number;
+  payment_method: string;
+  notes: string | null;
+  created_by: string;
+  created_by_name?: string;
+  created_at: string;
+  posted_at: string | null;
+  posted_by: string | null;
+  voided_at: string | null;
+  voided_by: string | null;
+  void_reason: string | null;
+}
+
+export interface PayrollRunItem {
+  id: string;
+  run_id: string;
+  worker_id: string;
+  worker_code?: string;
+  worker_name?: string;
+  department_name?: string;
+  payroll_cycle?: string;
+  days_worked: number;
+  total_qty: number;
+  earned_in_period: number;
+  advances_in_period: number;
+  previous_balance: number;
+  net_payable: number;
+  payment_amount: number;
+  is_selected: boolean;
+  notes: string | null;
+  worker_payment_id: string | null;
+  payment_number?: string;
 }

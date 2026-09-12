@@ -75,6 +75,10 @@ const ALLOWED_CHANNELS = new Set<string>([
   'workers:get-family', 'workers:set-family', 'workers:account-summary',
   // daily production summary (Phase A)
   'reports:daily-summary',
+  // payroll (Phase B)
+  'payroll:create-run', 'payroll:get-run', 'payroll:list-runs',
+  'payroll:update-item', 'payroll:post-run', 'payroll:void-run',
+  'payroll:delete-run', 'payroll:set-worker-cycle',
 ]);
 
 contextBridge.exposeInMainWorld('erp', {

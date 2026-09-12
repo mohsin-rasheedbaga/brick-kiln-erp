@@ -45,6 +45,8 @@ import { registerReportHandlers } from './ipc/reports';
 // Phase 4 modules
 import { registerDepartmentRateHandlers } from './ipc/departmentRates';
 import { registerDailySummaryHandlers } from './ipc/dailySummary';
+// Phase B modules
+import { registerPayrollHandlers } from './ipc/payroll';
 
 // Configure logging
 log.transports.file.level = 'info';
@@ -212,6 +214,8 @@ function registerIpcHandlers(): void {
   // Phase 4 modules
   registerDepartmentRateHandlers();
   registerDailySummaryHandlers();
+  // Phase B modules
+  registerPayrollHandlers();
   log.info('[main] All IPC handlers registered.');
 }
 
