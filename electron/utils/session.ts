@@ -11,7 +11,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
-import { getDb, get, run } from '../database/connection';
+import { getDb, get, all, run } from '../database/connection';
 import log from 'electron-log';
 
 export interface Session {
@@ -135,13 +135,13 @@ export function hasAnyPermission(token: string, permissionCodes: string[]): bool
  */
 export function loadRolePermissions(roleId: string): string[] {
   const db = getDb();
-  const rows = get<{ code: string }[]>(
-    db as any,
+  const rows = all<{ code: string }>(
+    db,
     `SELECT p.code
      FROM role_permissions rp
      JOIN permissions p ON rp.permission_id = p.id
      WHERE rp.role_id = ?`,
     roleId
-  ) as unknown as { code: string }[];
+  );
   return rows.map((r) => r.code);
 }
