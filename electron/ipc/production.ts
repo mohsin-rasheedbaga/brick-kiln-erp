@@ -190,14 +190,21 @@ export function registerProductionHandlers(): void {
       if (!VALID_STAGES.includes(args.stage)) throw new Error('Invalid production stage.');
       if (!Number.isInteger(args.quantity) || args.quantity <= 0) throw new Error('Quantity must be a positive integer.');
       if (!args.workerId) throw new Error('Worker is required.');
-      if (!args.departmentId) throw new Error('Department is required.');
       if (!args.workTypeId) throw new Error('Work type is required.');
+
+      // Phase v1.9.0: Auto-set department from session if supervisor has department_id
+      // This means supervisors don't need to select their department — it's automatic.
+      let departmentId = args.departmentId;
+      if (!departmentId && session.departmentId && session.roleId !== 'role-super-admin') {
+        departmentId = session.departmentId;
+      }
+      if (!departmentId) throw new Error('Department is required.');
 
       const db = getDb();
       // Validate worker, department, work_type
       const worker = get<{ id: string; rate_per_1000: number }>(db, 'SELECT id, rate_per_1000 FROM workers WHERE id = ?', args.workerId);
       if (!worker) throw new Error('Worker not found.');
-      const dept = get<{ id: string }>(db, 'SELECT id FROM departments WHERE id = ?', args.departmentId);
+      const dept = get<{ id: string }>(db, 'SELECT id FROM departments WHERE id = ?', departmentId);
       if (!dept) throw new Error('Department not found.');
       const wt = get<{ id: string; default_rate_per_1000: number }>(db, 'SELECT id, default_rate_per_1000 FROM work_types WHERE id = ?', args.workTypeId);
       if (!wt) throw new Error('Work type not found.');
@@ -219,7 +226,7 @@ export function registerProductionHandlers(): void {
             db,
             `SELECT rate_per_1000 FROM department_rates
              WHERE department_id = ? AND work_type_id = ? AND brick_category_id = ? AND is_active = 1`,
-            args.departmentId, args.workTypeId, args.categoryId
+            departmentId, args.workTypeId, args.categoryId
           );
         }
         if (!deptRate) {
@@ -227,7 +234,7 @@ export function registerProductionHandlers(): void {
             db,
             `SELECT rate_per_1000 FROM department_rates
              WHERE department_id = ? AND work_type_id = ? AND brick_category_id IS NULL AND is_active = 1`,
-            args.departmentId, args.workTypeId
+            departmentId, args.workTypeId
           );
         }
         rate = deptRate?.rate_per_1000 ?? (worker.rate_per_1000 || wt.default_rate_per_1000);
@@ -254,7 +261,7 @@ export function registerProductionHandlers(): void {
           `INSERT INTO production_entries (id, stage, date, batch_id, kiln_id, worker_id, department_id, work_type_id,
             quantity, rate_per_1000, labour_amount, transport_method, notes, entered_by, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-          id, args.stage, date, args.batchId ?? null, args.kilnId ?? null, args.workerId, args.departmentId, args.workTypeId,
+          id, args.stage, date, args.batchId ?? null, args.kilnId ?? null, args.workerId, departmentId, args.workTypeId,
           args.quantity, rate, labourAmount, args.transportMethod ?? null, args.notes ?? null, session.userId
         );
 
@@ -305,6 +312,13 @@ export function registerProductionHandlers(): void {
       const db = getDb();
       const where: string[] = [];
       const params: any[] = [];
+
+      // Phase v1.9.0: Department-scoped access — supervisors see only their dept's production
+      if (session.departmentId && session.roleId !== 'role-super-admin') {
+        where.push('pe.department_id = ?');
+        params.push(session.departmentId);
+      }
+
       if (args.stage) { where.push('pe.stage = ?'); params.push(args.stage); }
       if (args.workerId) { where.push('pe.worker_id = ?'); params.push(args.workerId); }
       if (args.departmentId) { where.push('pe.department_id = ?'); params.push(args.departmentId); }

@@ -32,7 +32,6 @@ interface Props {
 export function WorkerCardPrint({ worker, onClose }: Props) {
   const [barcodeDataUrl, setBarcodeDataUrl] = useState<string>('');
   const [familyNumber, setFamilyNumber] = useState<string | null>(null);
-  const [accountBalance, setAccountBalance] = useState<number | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
@@ -63,19 +62,15 @@ export function WorkerCardPrint({ worker, onClose }: Props) {
           color: { dark: '#0f172a', light: '#ffffff' },
         });
 
-        // Phase 4: Load family number + account balance in parallel
+        // Load family number only (no balance on card — per user request)
         try {
-          const { workerFamily, workerAccount } = await import('../lib/ipc');
-          const [fam, acc] = await Promise.all([
-            workerFamily.get(worker.id),
-            workerAccount.summary(worker.id),
-          ]);
+          const { workerFamily } = await import('../lib/ipc');
+          const fam = await workerFamily.get(worker.id);
           if (mounted) {
             setFamilyNumber(fam?.family_number ?? null);
-            setAccountBalance(acc.balance);
           }
         } catch (e) {
-          // Not critical — card still prints without these
+          // Not critical — card still prints without this
         }
 
         if (mounted) {
@@ -145,13 +140,6 @@ export function WorkerCardPrint({ worker, onClose }: Props) {
                   <div className="text-slate-500">Work: <span className="font-semibold text-slate-900">{worker.work_type_name || '—'}</span></div>
                   {familyNumber && (
                     <div className="text-slate-500">Gharana: <span className="font-mono text-slate-900">{familyNumber}</span></div>
-                  )}
-                  {accountBalance !== null && (
-                    <div className="text-slate-500">
-                      Bal: <span className={`font-mono font-bold ${accountBalance >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                        Rs. {accountBalance.toFixed(0)}
-                      </span>
-                    </div>
                   )}
                 </div>
               </div>

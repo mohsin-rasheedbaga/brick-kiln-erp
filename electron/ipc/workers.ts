@@ -189,6 +189,14 @@ export function registerWorkerHandlers(): void {
       const where: string[] = [];
       const params: any[] = [];
 
+      // Phase v1.9.0: Department-scoped access — if user has a department_id and
+      // is not super-admin, force-filter to their department only.
+      // This means supervisors only see their own department's workers.
+      if (session.departmentId && session.roleId !== 'role-super-admin') {
+        where.push('w.department_id = ?');
+        params.push(session.departmentId);
+      }
+
       if (args.search) {
         where.push('(w.full_name LIKE ? OR w.worker_code LIKE ? OR w.barcode LIKE ? OR w.mobile LIKE ?)');
         const q = `%${args.search}%`;
