@@ -111,7 +111,8 @@ export const workers = {
   create: (data: {
     full_name: string; father_name?: string; mobile?: string; address?: string;
     cnic?: string; joining_date?: string; department_id: string; work_type_id?: string;
-    rate_per_1000?: number; notes?: string;
+    rate_per_1000?: number; employment_type?: 'piece_rate' | 'salary';
+    monthly_salary?: number; allowed_leaves?: number; notes?: string;
   }) => call<Worker>('workers:create', data),
   update: (id: string, changes: Partial<Worker>) =>
     call<Worker>('workers:update', { id, ...changes }),

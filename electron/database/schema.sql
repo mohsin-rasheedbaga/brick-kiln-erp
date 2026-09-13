@@ -155,6 +155,10 @@ CREATE TABLE IF NOT EXISTS workers (
   qr_token        TEXT NOT NULL UNIQUE,     -- token used inside QR (mapped to worker_id at scan)
   notes           TEXT,
   left_date       TEXT,
+  employment_type TEXT NOT NULL DEFAULT 'piece_rate'
+                    CHECK (employment_type IN ('piece_rate','salary')),
+  monthly_salary  REAL NOT NULL DEFAULT 0,     -- fixed monthly salary (if employment_type='salary')
+  allowed_leaves  INTEGER NOT NULL DEFAULT 4,  -- allowed leave days per month (salary workers)
   payroll_cycle   TEXT NOT NULL DEFAULT 'weekly'
                     CHECK (payroll_cycle IN ('weekly','monthly','daily')),
   daily_wage      REAL NOT NULL DEFAULT 0,       -- optional fixed daily wage (if not piece-rate)

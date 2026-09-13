@@ -19,17 +19,20 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const { user } = useAuthStore();
+  const { user, hasPermission } = useAuthStore();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // 30-day production trend (loaded in parallel)
   const [prodTrend, setProdTrend] = useState<Array<{ label: string; value: number }>>([]);
+
+  // Determine what sections to show based on permissions
+  const canSeeAccounts = hasPermission('accounts.view') || hasPermission('expenses.view') || hasPermission('worker_payments.view');
+  const canSeeSales = hasPermission('sales.view') || hasPermission('customers.view');
+  const canSeeProduction = hasPermission('production.view') || hasPermission('dashboard.view');
 
   useEffect(() => {
     Promise.all([
       dashApi.stats(),
-      // 30-day production grouped by day
       reportsApi.production({
         from: new Date(Date.now() - 30 * 86400 * 1000).toISOString().slice(0, 10),
         to: new Date().toISOString().slice(0, 10),
@@ -38,9 +41,8 @@ export default function DashboardPage() {
     ])
       .then(([s, prod]) => {
         setStats(s);
-        // Convert rows to chart data
         setProdTrend((prod.rows || []).slice(0, 30).reverse().map((r: any) => ({
-          label: r.date ? r.date.slice(5) : '', // MM-DD
+          label: r.date ? r.date.slice(5) : '',
           value: r.total_qty ?? 0,
         })));
       })
@@ -61,80 +63,90 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Today's activity cards */}
+      {/* Today's activity cards — shown based on permissions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          label="Today's Production"
-          value={formatNumber(stats.today.total_production_qty)}
-          sublabel={`${formatCurrency(stats.today.total_labour)} labour`}
-          icon={<Package className="h-5 w-5" />}
-          color="text-amber-600"
-        />
-        <KpiCard
-          label="Today's Sales"
-          value={formatCurrency(stats.today.sales_total)}
-          sublabel={`${stats.today.sales_count} invoice${stats.today.sales_count === 1 ? '' : 's'}`}
-          icon={<TrendingUp className="h-5 w-5" />}
-          color="text-emerald-600"
-        />
-        <KpiCard
-          label="Today's Expenses"
-          value={formatCurrency(stats.today.expenses_total)}
-          sublabel={`${stats.today.expenses_count} expense${stats.today.expenses_count === 1 ? '' : 's'}`}
-          icon={<TrendingDown className="h-5 w-5" />}
-          color="text-red-600"
-        />
-        <KpiCard
-          label="Cash Balance"
-          value={formatCurrency(stats.cash_balance)}
-          sublabel={`${formatCurrency(stats.today.cash_received)} received today`}
-          icon={<Wallet className="h-5 w-5" />}
-          color="text-brand-600"
-        />
+        {canSeeProduction && (
+          <KpiCard
+            label="Today's Production"
+            value={formatNumber(stats.today.total_production_qty)}
+            sublabel={`${formatCurrency(stats.today.total_labour)} labour`}
+            icon={<Package className="h-5 w-5" />}
+            color="text-amber-600"
+          />
+        )}
+        {canSeeSales && (
+          <KpiCard
+            label="Today's Sales"
+            value={formatCurrency(stats.today.sales_total)}
+            sublabel={`${stats.today.sales_count} invoice${stats.today.sales_count === 1 ? '' : 's'}`}
+            icon={<TrendingUp className="h-5 w-5" />}
+            color="text-emerald-600"
+          />
+        )}
+        {canSeeAccounts && (
+          <KpiCard
+            label="Today's Expenses"
+            value={formatCurrency(stats.today.expenses_total)}
+            sublabel={`${stats.today.expenses_count} expense${stats.today.expenses_count === 1 ? '' : 's'}`}
+            icon={<TrendingDown className="h-5 w-5" />}
+            color="text-red-600"
+          />
+        )}
+        {canSeeAccounts && (
+          <KpiCard
+            label="Cash Balance"
+            value={formatCurrency(stats.cash_balance)}
+            sublabel={`${formatCurrency(stats.today.cash_received)} received today`}
+            icon={<Wallet className="h-5 w-5" />}
+            color="text-brand-600"
+          />
+        )}
       </div>
 
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's production by stage (bar chart) */}
-        <div className="card p-5 lg:col-span-2">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold text-slate-900">Today's Production by Stage</h2>
-            <Link to="/production" className="text-xs text-brand-600 hover:underline">View all →</Link>
+      {/* Charts row — shown based on permissions */}
+      {canSeeProduction && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Today's production by stage (bar chart) */}
+          <div className="card p-5 lg:col-span-2">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-slate-900">Today's Production by Stage</h2>
+              <Link to="/production" className="text-xs text-brand-600 hover:underline">View all →</Link>
+            </div>
+            {stats.today.production_by_stage.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-6">No production recorded today.</p>
+            ) : (
+              <BarChart
+                data={stats.today.production_by_stage.map((p) => ({
+                  label: STAGE_LABELS[p.stage] || p.stage,
+                  value: p.total_qty,
+                }))}
+                formatValue={(n) => formatNumber(n)}
+                height={220}
+              />
+            )}
           </div>
-          {stats.today.production_by_stage.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-6">No production recorded today.</p>
-          ) : (
-            <BarChart
-              data={stats.today.production_by_stage.map((p) => ({
-                label: STAGE_LABELS[p.stage] || p.stage,
-                value: p.total_qty,
-              }))}
-              formatValue={(n) => formatNumber(n)}
-              height={220}
-            />
-          )}
-        </div>
 
-        {/* Stock by category donut */}
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold text-slate-900">Stock by Category</h2>
-            <Link to="/stock" className="text-xs text-brand-600 hover:underline">View →</Link>
+          {/* Stock by category donut */}
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-slate-900">Stock by Category</h2>
+              <Link to="/stock" className="text-xs text-brand-600 hover:underline">View →</Link>
+            </div>
+            {stats.stock_by_category.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-6">No stock on hand.</p>
+            ) : (
+              <DonutChart
+                data={stats.stock_by_category.map((s) => ({
+                  label: s.category_name,
+                  value: s.quantity,
+                }))}
+                formatValue={(n) => formatNumber(n)}
+                size={140}
+              />
+            )}
           </div>
-          {stats.stock_by_category.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-6">No stock on hand.</p>
-          ) : (
-            <DonutChart
-              data={stats.stock_by_category.map((s) => ({
-                label: s.category_name,
-                value: s.quantity,
-              }))}
-              formatValue={(n) => formatNumber(n)}
-              size={140}
-            />
-          )}
         </div>
-      </div>
+      )}
 
       {/* 30-day production trend */}
       <div className="card p-5">
@@ -155,31 +167,42 @@ export default function DashboardPage() {
 
       {/* Operational mini-stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MiniStatCard label="Active Workers" value={stats.active_workers} icon={Users} to="/workers" />
-        <MiniStatCard label="Departments" value={stats.active_departments} icon={Building2} to="/departments" />
-        <MiniStatCard label="Active Batches" value={stats.active_batches} icon={Package} to="/batches" subtitle={`${stats.firing_batches} firing`} />
-        <MiniStatCard label="Open Invoices" value={stats.open_invoices_count} icon={AlertCircle} to="/sales" />
+        {hasPermission('workers.view') && (
+          <MiniStatCard label="Active Workers" value={stats.active_workers} icon={Users} to="/workers" />
+        )}
+        {hasPermission('departments.manage') && (
+          <MiniStatCard label="Departments" value={stats.active_departments} icon={Building2} to="/departments" />
+        )}
+        {hasPermission('batches.view') && (
+          <MiniStatCard label="Active Batches" value={stats.active_batches} icon={Package} to="/batches" subtitle={`${stats.firing_batches} firing`} />
+        )}
+        {canSeeSales && (
+          <MiniStatCard label="Open Invoices" value={stats.open_invoices_count} icon={AlertCircle} to="/sales" />
+        )}
       </div>
 
-      {/* Receivables & payables */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="card p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <ArrowDownToLine className="h-5 w-5 text-amber-600" />
-            <h2 className="text-base font-semibold text-slate-900">Customer Receivables</h2>
-          </div>
-          <div className="text-2xl font-bold text-amber-700">{formatCurrency(stats.customer_receivables)}</div>
-          <div className="text-xs text-slate-500 mt-1">Total outstanding from {stats.open_invoices_count} open invoice(s)</div>
-        </div>
+      {/* Receivables & payables — only for accounts/sales users */}
+      {canSeeAccounts && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {canSeeSales && (
+            <div className="card p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <ArrowDownToLine className="h-5 w-5 text-amber-600" />
+                <h2 className="text-base font-semibold text-slate-900">Customer Receivables</h2>
+              </div>
+              <div className="text-2xl font-bold text-amber-700">{formatCurrency(stats.customer_receivables)}</div>
+              <div className="text-xs text-slate-500 mt-1">Total outstanding from {stats.open_invoices_count} open invoice(s)</div>
+            </div>
+          )}
 
-        <div className="card p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <ArrowUpFromLine className="h-5 w-5 text-purple-600" />
-            <h2 className="text-base font-semibold text-slate-900">Worker Payable</h2>
+          <div className="card p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <ArrowUpFromLine className="h-5 w-5 text-purple-600" />
+              <h2 className="text-base font-semibold text-slate-900">Worker Payable</h2>
+            </div>
+            <div className="text-2xl font-bold text-purple-700">{formatCurrency(stats.worker_payable)}</div>
+            <div className="text-xs text-slate-500 mt-1">Total earned − advances − payments (active workers)</div>
           </div>
-          <div className="text-2xl font-bold text-purple-700">{formatCurrency(stats.worker_payable)}</div>
-          <div className="text-xs text-slate-500 mt-1">Total earned − advances − payments (active workers)</div>
-        </div>
 
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-2">
@@ -199,17 +222,18 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      )}
 
-      {/* Quick links */}
+      {/* Quick links — based on permissions */}
       <div className="card p-5">
         <h2 className="text-base font-semibold text-slate-900 mb-3">Quick Actions</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <QuickAction to="/sales" icon={TrendingUp} label="New Sale" />
-          <QuickAction to="/production" icon={Package} label="Record Production" />
-          <QuickAction to="/expenses" icon={TrendingDown} label="New Expense" />
-          <QuickAction to="/cash" icon={Wallet} label="Cash Register" />
-          <QuickAction to="/batches" icon={Boxes} label="Batches" />
-          <QuickAction to="/workers" icon={Users} label="Workers" />
+          {canSeeSales && <QuickAction to="/sales" icon={TrendingUp} label="New Sale" />}
+          {canSeeProduction && <QuickAction to="/production" icon={Package} label="Record Production" />}
+          {canSeeAccounts && <QuickAction to="/expenses" icon={TrendingDown} label="New Expense" />}
+          {canSeeAccounts && <QuickAction to="/cash" icon={Wallet} label="Cash Register" />}
+          {hasPermission('batches.view') && <QuickAction to="/batches" icon={Boxes} label="Batches" />}
+          {hasPermission('workers.view') && <QuickAction to="/workers" icon={Users} label="Workers" />}
         </div>
       </div>
     </div>

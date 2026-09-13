@@ -40,6 +40,11 @@ export interface Worker {
   qr_token: string;
   notes: string | null;
   left_date: string | null;
+  employment_type: 'piece_rate' | 'salary';
+  monthly_salary: number;
+  allowed_leaves: number;
+  payroll_cycle: string;
+  daily_wage: number;
   created_at: string;
   updated_at: string;
 }
@@ -55,6 +60,9 @@ interface CreateWorkerArgs {
   department_id: string;
   work_type_id?: string;
   rate_per_1000?: number;
+  employment_type?: 'piece_rate' | 'salary';
+  monthly_salary?: number;
+  allowed_leaves?: number;
   notes?: string;
 }
 
@@ -120,6 +128,11 @@ function rowToWorker(row: any): Worker {
     qr_token: row.qr_token,
     notes: row.notes,
     left_date: row.left_date,
+    employment_type: row.employment_type || 'piece_rate',
+    monthly_salary: row.monthly_salary ?? 0,
+    allowed_leaves: row.allowed_leaves ?? 4,
+    payroll_cycle: row.payroll_cycle || 'weekly',
+    daily_wage: row.daily_wage ?? 0,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -254,16 +267,22 @@ export function registerWorkerHandlers(): void {
       const joiningDate = args.joining_date || new Date().toISOString().slice(0, 10);
 
       transaction(db, () => {
+        const employmentType = args.employment_type || 'piece_rate';
+        const monthlySalary = args.monthly_salary ? Number(args.monthly_salary) : 0;
+        const allowedLeaves = args.allowed_leaves !== undefined ? Number(args.allowed_leaves) : 4;
         run(
           db,
           `INSERT INTO workers
             (id, worker_code, full_name, father_name, mobile, address, cnic, joining_date,
              department_id, work_type_id, rate_per_1000, status, photo_path, barcode, qr_token,
-             notes, left_date, created_by, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NULL, ?, ?, ?, NULL, ?, datetime('now'), datetime('now'))`,
+             notes, left_date, employment_type, monthly_salary, allowed_leaves,
+             created_by, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NULL, ?, ?, ?, NULL, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
           id, workerCode, fullName, args.father_name ?? null, args.mobile ?? null, args.address ?? null,
           args.cnic ?? null, joiningDate, args.department_id, args.work_type_id ?? null, rate,
-          barcode, qrToken, args.notes ?? null, session.userId
+          barcode, qrToken, args.notes ?? null,
+          employmentType, monthlySalary, allowedLeaves,
+          session.userId
         );
         audit({
           userId: session.userId,
@@ -293,6 +312,9 @@ export function registerWorkerHandlers(): void {
     department_id?: string;
     work_type_id?: string;
     rate_per_1000?: number;
+    employment_type?: 'piece_rate' | 'salary';
+    monthly_salary?: number;
+    allowed_leaves?: number;
     notes?: string;
   }): Promise<IpcResult<Worker>> => {
     return wrap(async () => {
@@ -335,6 +357,20 @@ export function registerWorkerHandlers(): void {
         const v = Number(args.rate_per_1000);
         if (isNaN(v) || v < 0) throw new Error('Rate must be a non-negative number.');
         updates.push('rate_per_1000 = ?'); params.push(v);
+      }
+      if (args.employment_type !== undefined) {
+        if (!['piece_rate', 'salary'].includes(args.employment_type)) throw new Error('Invalid employment type.');
+        updates.push('employment_type = ?'); params.push(args.employment_type);
+      }
+      if (args.monthly_salary !== undefined) {
+        const v = Number(args.monthly_salary);
+        if (isNaN(v) || v < 0) throw new Error('Monthly salary must be non-negative.');
+        updates.push('monthly_salary = ?'); params.push(v);
+      }
+      if (args.allowed_leaves !== undefined) {
+        const v = Number(args.allowed_leaves);
+        if (!Number.isInteger(v) || v < 0) throw new Error('Allowed leaves must be a non-negative integer.');
+        updates.push('allowed_leaves = ?'); params.push(v);
       }
       if (args.notes !== undefined) { updates.push('notes = ?'); params.push(args.notes || null); }
 

@@ -116,5 +116,9 @@ textarea:focus-visible {
   .no-print { display: none !important; }
   .print-only { display: block !important; }
   body { background: white !important; }
+  /* Hide everything except the card when printing */
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; left: 0; top: 0; width: 100%; }
 }
-.print-only { display: none; }
+.print-only { display: block; }

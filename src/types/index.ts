@@ -77,6 +77,9 @@ export interface Worker {
   left_date: string | null;
   payroll_cycle?: 'weekly' | 'monthly' | 'daily';
   daily_wage?: number;
+  employment_type?: 'piece_rate' | 'salary';
+  monthly_salary?: number;
+  allowed_leaves?: number;
   created_at: string;
   updated_at: string;
 }

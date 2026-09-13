@@ -121,7 +121,7 @@ export function WorkerCardPrint({ worker, onClose }: Props) {
           {/* Card - 8.5cm x 5.4cm (CR80 standard) */}
           <div
             ref={printRef}
-            className="print-only bg-white border-2 border-slate-300 rounded-lg shadow-lg"
+            className="print-area bg-white border-2 border-slate-300 rounded-lg shadow-lg"
             style={{ width: '8.5cm', height: '5.4cm', padding: '0.3cm', position: 'relative', overflow: 'hidden' }}
           >
             {/* Header band */}

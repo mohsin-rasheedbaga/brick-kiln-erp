@@ -191,6 +191,9 @@ function WorkerModal({ worker, departments, onClose, onSaved }: {
     department_id: worker?.department_id ?? '',
     work_type_id: worker?.work_type_id ?? '',
     rate_per_1000: worker?.rate_per_1000 ?? 0,
+    employment_type: (worker?.employment_type || 'piece_rate') as 'piece_rate' | 'salary',
+    monthly_salary: worker?.monthly_salary ?? 0,
+    allowed_leaves: worker?.allowed_leaves ?? 4,
     notes: worker?.notes ?? '',
   });
   const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
@@ -278,10 +281,51 @@ function WorkerModal({ worker, departments, onClose, onSaved }: {
             {filteredWorkTypes.map((w) => <option key={w.id} value={w.id}>{w.name} (Rs. {w.default_rate_per_1000}/1000)</option>)}
           </select>
         </div>
-        <div>
-          <label className="label">Rate per 1000 (Rs.)</label>
-          <input type="number" min={0} step="1" className="input" value={form.rate_per_1000} onChange={(e) => setForm({ ...form, rate_per_1000: Number(e.target.value) })} disabled={saving} />
+
+        {/* Employment Type Selector */}
+        <div className="sm:col-span-2">
+          <label className="label">Employment Type *</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, employment_type: 'piece_rate' })}
+              className={`py-2 px-3 rounded-md border text-sm font-medium ${form.employment_type === 'piece_rate' ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-300 text-slate-600'}`}
+            >
+              ٹھیکے پر (Piece Rate) — per 1000 bricks
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, employment_type: 'salary' })}
+              className={`py-2 px-3 rounded-md border text-sm font-medium ${form.employment_type === 'salary' ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-300 text-slate-600'}`}
+            >
+              تنخواہ (Salary) — monthly fixed
+            </button>
+          </div>
         </div>
+
+        {/* Piece Rate fields */}
+        {form.employment_type === 'piece_rate' && (
+          <div>
+            <label className="label">Rate per 1000 (Rs.)</label>
+            <input type="number" min={0} step="1" className="input" value={form.rate_per_1000} onChange={(e) => setForm({ ...form, rate_per_1000: Number(e.target.value) })} disabled={saving} />
+          </div>
+        )}
+
+        {/* Salary fields */}
+        {form.employment_type === 'salary' && (
+          <>
+            <div>
+              <label className="label">Monthly Salary (Rs.)</label>
+              <input type="number" min={0} step="0.01" className="input" value={form.monthly_salary} onChange={(e) => setForm({ ...form, monthly_salary: Number(e.target.value) })} disabled={saving} />
+              <p className="text-xs text-slate-500 mt-1">Fixed monthly salary for guards, drivers, etc.</p>
+            </div>
+            <div>
+              <label className="label">Allowed Leaves per Month</label>
+              <input type="number" min={0} step="1" className="input" value={form.allowed_leaves} onChange={(e) => setForm({ ...form, allowed_leaves: Number(e.target.value) })} disabled={saving} />
+              <p className="text-xs text-slate-500 mt-1">Leave days allowed without salary deduction</p>
+            </div>
+          </>
+        )}
         <div className="sm:col-span-2">
           <label className="label">Address</label>
           <textarea className="input" rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} disabled={saving} />

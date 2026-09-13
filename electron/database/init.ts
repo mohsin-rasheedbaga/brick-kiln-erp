@@ -230,6 +230,26 @@ function runMigrations(): void {
     log.warn('[db-init] Migration v1.7.0 (users.custom_permissions) error:', err);
   }
 
+  // Migration v1.8.0: add employment_type, monthly_salary, allowed_leaves to workers table
+  try {
+    const cols = all<{ name: string }>(db, "PRAGMA table_info(workers)");
+    const colNames = new Set(cols.map((c) => c.name));
+    if (!colNames.has('employment_type')) {
+      log.info('[db-init] Migration v1.8.0: adding workers.employment_type column');
+      db.exec("ALTER TABLE workers ADD COLUMN employment_type TEXT NOT NULL DEFAULT 'piece_rate' CHECK (employment_type IN ('piece_rate','salary'))");
+    }
+    if (!colNames.has('monthly_salary')) {
+      log.info('[db-init] Migration v1.8.0: adding workers.monthly_salary column');
+      db.exec('ALTER TABLE workers ADD COLUMN monthly_salary REAL NOT NULL DEFAULT 0');
+    }
+    if (!colNames.has('allowed_leaves')) {
+      log.info('[db-init] Migration v1.8.0: adding workers.allowed_leaves column');
+      db.exec('ALTER TABLE workers ADD COLUMN allowed_leaves INTEGER NOT NULL DEFAULT 4');
+    }
+  } catch (err) {
+    log.warn('[db-init] Migration v1.8.0 (workers salary columns) error:', err);
+  }
+
   // Ensure schema_version is set to the latest
   run(db, "INSERT INTO app_meta (key, value, updated_at) VALUES ('schema_version', ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')", SCHEMA_VERSION);
 }
