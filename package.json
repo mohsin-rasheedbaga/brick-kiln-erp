@@ -1,6 +1,6 @@
 {
   "name": "brick-kiln-erp",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Brick Kiln Management ERP for Windows Desktop - Production, Labour, Sales, Accounts",
   "author": "Brick Kiln ERP Team",
   "license": "MIT",
@@ -26,31 +26,33 @@
     "rebuild": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
-    "better-sqlite3": "^11.3.0",
+    "@supabase/supabase-js": "^2.116.0",
     "bcryptjs": "^2.4.3",
-    "electron-updater": "^6.3.9",
-    "electron-log": "^5.2.0",
-    "jsbarcode": "^3.11.6",
-    "qrcode": "^1.5.4",
-    "uuid": "^10.0.0",
+    "better-sqlite3": "^11.3.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
-    "zustand": "^4.5.5",
-    "react-router-dom": "^6.26.2",
+    "electron-log": "^5.2.0",
+    "electron-updater": "^6.3.9",
+    "googleapis": "^180.0.0",
+    "jsbarcode": "^3.11.6",
+    "lucide-react": "^0.441.0",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "lucide-react": "^0.441.0",
-    "clsx": "^2.1.1",
+    "react-router-dom": "^6.26.2",
     "tailwind-merge": "^2.5.4",
-    "class-variance-authority": "^0.7.0"
+    "uuid": "^10.0.0",
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.11",
     "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/jsbarcode": "^3.11.4",
     "@types/node": "^22.5.4",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
-    "@types/jsbarcode": "^3.11.4",
-    "@types/qrcode": "^1.5.5",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
@@ -59,13 +61,13 @@
     "electron": "^32.1.2",
     "electron-builder": "^25.0.5",
     "electron-rebuild": "^3.2.9",
+    "eslint": "^9.10.0",
     "postcss": "^8.4.45",
     "tailwindcss": "^3.4.10",
     "typescript": "^5.5.4",
     "vite": "^5.4.3",
     "vitest": "^2.0.5",
-    "wait-on": "^7.2.0",
-    "eslint": "^9.10.0"
+    "wait-on": "^7.2.0"
   },
   "build": {
     "appId": "com.brickkiln.erp",
@@ -95,7 +97,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build-resources/icon.ico",

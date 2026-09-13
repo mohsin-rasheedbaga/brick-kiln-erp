@@ -79,6 +79,12 @@ const ALLOWED_CHANNELS = new Set<string>([
   'payroll:create-run', 'payroll:get-run', 'payroll:list-runs',
   'payroll:update-item', 'payroll:post-run', 'payroll:void-run',
   'payroll:delete-run', 'payroll:set-worker-cycle',
+  // cloud sync (Phase C)
+  'cloud:status', 'cloud:supabase-configure', 'cloud:supabase-test',
+  'cloud:supabase-sync', 'cloud:supabase-sync-status',
+  'cloud:gdrive-set-config', 'cloud:gdrive-auth-url', 'cloud:gdrive-exchange-code',
+  'cloud:gdrive-disconnect', 'cloud:gdrive-status', 'cloud:gdrive-backup',
+  'cloud:gdrive-list-backups', 'cloud:open-link',
 ]);
 
 contextBridge.exposeInMainWorld('erp', {

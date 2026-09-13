@@ -191,6 +191,33 @@ function runMigrations(): void {
     log.warn('[db-init] Migration v1.5.0 (workers columns) error:', err);
   }
 
+  // Migration v1.6.0: add cloud sync columns to settings table
+  try {
+    const cols = all<{ name: string }>(db, "PRAGMA table_info(settings)");
+    const colNames = new Set(cols.map((c) => c.name));
+    const newCols = [
+      ['supabase_enabled', 'INTEGER NOT NULL DEFAULT 0'],
+      ['supabase_url', 'TEXT'],
+      ['supabase_anon_key', 'TEXT'],
+      ['gdrive_enabled', 'INTEGER NOT NULL DEFAULT 0'],
+      ['gdrive_client_id', 'TEXT'],
+      ['gdrive_client_secret', 'TEXT'],
+      ['gdrive_refresh_token', 'TEXT'],
+      ['gdrive_email', 'TEXT'],
+      ['gdrive_folder_id', 'TEXT'],
+      ['gdrive_auto_backup', 'INTEGER NOT NULL DEFAULT 1'],
+      ['gdrive_last_backup', 'TEXT'],
+    ];
+    for (const [colName, colDef] of newCols) {
+      if (!colNames.has(colName)) {
+        log.info(`[db-init] Migration v1.6.0: adding settings.${colName} column`);
+        db.exec(`ALTER TABLE settings ADD COLUMN ${colName} ${colDef}`);
+      }
+    }
+  } catch (err) {
+    log.warn('[db-init] Migration v1.6.0 (settings columns) error:', err);
+  }
+
   // Ensure schema_version is set to the latest
   run(db, "INSERT INTO app_meta (key, value, updated_at) VALUES ('schema_version', ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')", SCHEMA_VERSION);
 }

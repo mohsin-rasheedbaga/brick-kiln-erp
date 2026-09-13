@@ -47,6 +47,9 @@ import { registerDepartmentRateHandlers } from './ipc/departmentRates';
 import { registerDailySummaryHandlers } from './ipc/dailySummary';
 // Phase B modules
 import { registerPayrollHandlers } from './ipc/payroll';
+// Phase C modules
+import { registerCloudSyncHandlers } from './ipc/cloudSync';
+import * as gdriveService from './services/gdrive';
 
 // Configure logging
 log.transports.file.level = 'info';
@@ -216,6 +219,8 @@ function registerIpcHandlers(): void {
   registerDailySummaryHandlers();
   // Phase B modules
   registerPayrollHandlers();
+  // Phase C modules
+  registerCloudSyncHandlers();
   log.info('[main] All IPC handlers registered.');
 }
 
@@ -279,6 +284,24 @@ app.whenReady().then(() => {
       });
     }, 5000);
   }
+
+  // Phase C: Auto-backup scheduler — checks every hour if 24h passed since last backup
+  // If yes, uploads the database to Google Drive automatically.
+  setInterval(async () => {
+    try {
+      if (gdriveService.shouldAutoBackup()) {
+        log.info('[auto-backup] 24h elapsed — starting Google Drive backup...');
+        const result = await gdriveService.uploadBackup();
+        if (result.success) {
+          log.info(`[auto-backup] Success: ${result.fileName} (${result.fileSize} bytes)`);
+        } else {
+          log.warn('[auto-backup] Failed:', result.error);
+        }
+      }
+    } catch (err) {
+      log.error('[auto-backup] Error:', err);
+    }
+  }, 60 * 60 * 1000); // every 1 hour
 });
 
 app.on('window-all-closed', () => {

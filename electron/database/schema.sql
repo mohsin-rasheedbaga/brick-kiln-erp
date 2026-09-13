@@ -728,3 +728,43 @@ CREATE TABLE IF NOT EXISTS payroll_run_items (
 
 CREATE INDEX IF NOT EXISTS idx_payroll_items_run ON payroll_run_items(run_id);
 CREATE INDEX IF NOT EXISTS idx_payroll_items_worker ON payroll_run_items(worker_id);
+
+-- ============================================================
+-- 25. CLOUD SYNC STATE (Phase C - v1.6.0)
+-- ============================================================
+-- Tracks the last sync timestamp per table for Supabase sync.
+-- Used to do incremental sync (only push/pull changes since last sync).
+CREATE TABLE IF NOT EXISTS cloud_sync_state (
+  table_name      TEXT PRIMARY KEY,
+  last_sync_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  last_sync_direction TEXT,                    -- 'push', 'pull', 'both'
+  last_sync_status TEXT,                       -- 'success', 'failed', 'partial'
+  records_pushed  INTEGER NOT NULL DEFAULT 0,
+  records_pulled  INTEGER NOT NULL DEFAULT 0,
+  error_message   TEXT,
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- ============================================================
+-- 26. CLOUD BACKUP HISTORY (Phase C - v1.6.0)
+-- ============================================================
+-- Tracks Google Drive backups (separate from local backup_history).
+CREATE TABLE IF NOT EXISTS cloud_backup_history (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  backup_date     TEXT NOT NULL DEFAULT (datetime('now')),
+  provider        TEXT NOT NULL DEFAULT 'gdrive'
+                    CHECK (provider IN ('gdrive','supabase','other')),
+  file_name       TEXT NOT NULL,
+  file_size_bytes INTEGER,
+  drive_file_id   TEXT,                        -- Google Drive file ID
+  drive_link      TEXT,                        -- shareable link
+  backup_type     TEXT NOT NULL DEFAULT 'auto'
+                    CHECK (backup_type IN ('auto','manual','pre_restore')),
+  status          TEXT NOT NULL DEFAULT 'success'
+                    CHECK (status IN ('success','failed','partial')),
+  error_message   TEXT,
+  initiated_by    TEXT,
+  FOREIGN KEY (initiated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_cloud_backup_date ON cloud_backup_history(backup_date);

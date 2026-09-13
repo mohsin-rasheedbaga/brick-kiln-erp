@@ -489,3 +489,34 @@ export const payroll = {
   setWorkerCycle: (workerId: string, cycle: 'weekly' | 'monthly' | 'daily', dailyWage?: number) =>
     call<{ success: true }>('payroll:set-worker-cycle', { workerId, cycle, dailyWage }),
 };
+
+// =================== Phase C APIs (Cloud Sync) ===================
+
+export const cloud = {
+  status: () => call<{
+    supabase: { enabled: boolean; url: string | null; lastSync: string | null };
+    gdrive: { configured: boolean; connected: boolean; email: string | null; autoBackup: boolean; lastBackup: string | null };
+  }>('cloud:status'),
+  supabase: {
+    configure: (data: { enabled: boolean; url?: string; anonKey?: string }) =>
+      call<{ success: true }>('cloud:supabase-configure', data),
+    test: () => call<{ success: boolean; message: string }>('cloud:supabase-test'),
+    sync: () => call<{
+      success: boolean; total_pushed: number; total_pulled: number; errors: string[]; results: any[];
+    }>('cloud:supabase-sync'),
+    syncStatus: () => call<any[]>('cloud:supabase-sync-status'),
+  },
+  gdrive: {
+    setConfig: (data: { clientId?: string; clientSecret?: string; folderId?: string; autoBackup?: boolean }) =>
+      call<{ success: true }>('cloud:gdrive-set-config', data),
+    authUrl: () => call<{ url: string; error?: string }>('cloud:gdrive-auth-url'),
+    exchangeCode: (code: string) => call<{ success: boolean; email?: string; error?: string }>('cloud:gdrive-exchange-code', { code }),
+    disconnect: () => call<{ success: true }>('cloud:gdrive-disconnect'),
+    status: () => call<any>('cloud:gdrive-status'),
+    backup: () => call<{
+      success: boolean; fileId?: string; fileLink?: string; fileName?: string; fileSize?: number; error?: string;
+    }>('cloud:gdrive-backup'),
+    listBackups: () => call<any[]>('cloud:gdrive-list-backups'),
+    openLink: (url: string) => call<{ success: true }>('cloud:open-link', { url }),
+  },
+};

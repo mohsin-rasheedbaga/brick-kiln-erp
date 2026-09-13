@@ -5,6 +5,7 @@ import {
   Settings as SettingsIcon, History, DatabaseBackup, RefreshCw, LogOut,
   Menu, X, UserCircle, ChevronDown, ShoppingCart, Wallet, Users2,
   BarChart3, Package as PackageIcon, Tags, CalendarCheck, Calculator,
+  Cloud,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toast';
@@ -50,6 +51,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/settings',          label: 'Settings',         icon: SettingsIcon,    permission: 'settings.manage', group: 'Administration' },
   { to: '/audit',             label: 'Audit Log',        icon: History,         permission: 'system.audit', group: 'Administration' },
   { to: '/backup',            label: 'Backup & Restore', icon: DatabaseBackup,  permission: 'system.backup', group: 'Administration' },
+  { to: '/cloud-sync',        label: 'Cloud Sync',       icon: Cloud,           permission: 'settings.manage', group: 'Administration' },
   { to: '/updates',           label: 'Updates',          icon: RefreshCw, group: 'Administration' },
 ];
 
