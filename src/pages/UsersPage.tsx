@@ -3,8 +3,8 @@ import { PageHeader } from '../components/Card';
 import { Modal, ConfirmDialog } from '../components/Modal';
 import { Spinner, EmptyState } from '../components/Feedback';
 import { useToastStore } from '../stores/toast';
-import { users as userApi, roles as roleApi, departments as deptApi } from '../lib/ipc';
-import type { User, Role, Department } from '../types';
+import { users as userApi, roles as rolesApi, departments as deptApi } from '../lib/ipc';
+import type { User, Role, Department, Permission } from '../types';
 import { formatDate } from '../lib/utils';
 import { Plus, Edit2, Power, KeyRound } from 'lucide-react';
 
@@ -25,7 +25,7 @@ export default function UsersPage() {
     try {
       const [list, rs, ds] = await Promise.all([
         userApi.list(search || undefined, showInactive),
-        roleApi.list(true),
+        rolesApi.list(true),
         deptApi.list(true),
       ]);
       setItems(list as User[]);
@@ -141,7 +141,54 @@ function UserModal({ user, roles, departments, onClose, onSaved }: {
     must_change_password: user?.mustChangePassword ?? false,
   });
   const [saving, setSaving] = useState(false);
+  const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
+  const [useCustomPerms, setUseCustomPerms] = useState(false);
+  const [selectedPerms, setSelectedPerms] = useState<Set<string>>(new Set());
   const pushToast = useToastStore((s) => s.push);
+
+  useEffect(() => {
+    rolesApi.listPermissions().then(setAllPermissions).catch(() => {});
+  }, []);
+
+  // When role changes and not using custom perms, pre-fill from role
+  useEffect(() => {
+    if (!useCustomPerms && form.role_id) {
+      rolesApi.get(form.role_id).then((r) => {
+        if (r?.permission_codes) {
+          setSelectedPerms(new Set(r.permission_codes));
+        }
+      }).catch(() => {});
+    }
+  }, [form.role_id, useCustomPerms]);
+
+  const togglePerm = (code: string) => {
+    setSelectedPerms((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  };
+
+  const toggleModule = (modulePerms: Permission[]) => {
+    setSelectedPerms((prev) => {
+      const next = new Set(prev);
+      const allSelected = modulePerms.every((p) => next.has(p.code));
+      if (allSelected) {
+        modulePerms.forEach((p) => next.delete(p.code));
+      } else {
+        modulePerms.forEach((p) => next.add(p.code));
+      }
+      return next;
+    });
+  };
+
+  // Group permissions by module
+  const grouped = allPermissions.reduce<Record<string, Permission[]>>((acc, p) => {
+    if (!acc[p.module]) acc[p.module] = [];
+    acc[p.module].push(p);
+    return acc;
+  }, {});
 
   const handleSubmit = async () => {
     if (!form.username.trim() || !form.full_name.trim() || !form.role_id) {
@@ -154,6 +201,7 @@ function UserModal({ user, roles, departments, onClose, onSaved }: {
     }
     setSaving(true);
     try {
+      const customPerms = useCustomPerms ? Array.from(selectedPerms) : undefined;
       if (user) {
         await userApi.update(user.id, {
           full_name: form.full_name,
@@ -162,6 +210,7 @@ function UserModal({ user, roles, departments, onClose, onSaved }: {
           role_id: form.role_id,
           department_id: form.department_id || undefined,
           must_change_password: form.must_change_password,
+          custom_permissions: useCustomPerms ? Array.from(selectedPerms) : [],
         });
         pushToast('success', 'User updated.');
       } else {
@@ -174,6 +223,7 @@ function UserModal({ user, roles, departments, onClose, onSaved }: {
           role_id: form.role_id,
           department_id: form.department_id || undefined,
           must_change_password: form.must_change_password,
+          custom_permissions: useCustomPerms ? Array.from(selectedPerms) : undefined,
         });
         pushToast('success', 'User created.');
       }
@@ -189,7 +239,7 @@ function UserModal({ user, roles, departments, onClose, onSaved }: {
       open={true}
       onClose={onClose}
       title={user ? `Edit ${user.username}` : 'New User'}
-      size="md"
+      size="xl"
       footer={
         <>
           <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
@@ -200,21 +250,22 @@ function UserModal({ user, roles, departments, onClose, onSaved }: {
       }
     >
       <div className="space-y-4">
-        <div>
-          <label className="label">Username *</label>
-          <input className="input" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} disabled={saving || !!user} />
-        </div>
-        {!user && (
-          <div>
-            <label className="label">Password *</label>
-            <input type="password" className="input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} disabled={saving} />
-          </div>
-        )}
-        <div>
-          <label className="label">Full Name *</label>
-          <input className="input" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} disabled={saving} />
-        </div>
+        {/* Basic Info */}
         <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Username *</label>
+            <input className="input" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} disabled={saving || !!user} />
+          </div>
+          {!user && (
+            <div>
+              <label className="label">Password *</label>
+              <input type="password" className="input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} disabled={saving} />
+            </div>
+          )}
+          <div>
+            <label className="label">Full Name *</label>
+            <input className="input" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} disabled={saving} />
+          </div>
           <div>
             <label className="label">Email</label>
             <input className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} disabled={saving} />
@@ -223,15 +274,6 @@ function UserModal({ user, roles, departments, onClose, onSaved }: {
             <label className="label">Phone</label>
             <input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} disabled={saving} />
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label">Role *</label>
-            <select className="input" value={form.role_id} onChange={(e) => setForm({ ...form, role_id: e.target.value })} disabled={saving}>
-              <option value="">Select role...</option>
-              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </div>
           <div>
             <label className="label">Department</label>
             <select className="input" value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })} disabled={saving}>
@@ -239,11 +281,89 @@ function UserModal({ user, roles, departments, onClose, onSaved }: {
               {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
+          <div>
+            <label className="label">Role *</label>
+            <select className="input" value={form.role_id} onChange={(e) => setForm({ ...form, role_id: e.target.value })} disabled={saving}>
+              <option value="">Select role...</option>
+              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.must_change_password} onChange={(e) => setForm({ ...form, must_change_password: e.target.checked })} disabled={saving} />
+              Force password change on next login
+            </label>
+          </div>
         </div>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" checked={form.must_change_password} onChange={(e) => setForm({ ...form, must_change_password: e.target.checked })} disabled={saving} />
-          Force password change on next login
-        </label>
+
+        {/* Permission Selection */}
+        <div className="border-t border-slate-200 pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <label className="label mb-0">Permissions</label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={useCustomPerms}
+                onChange={(e) => {
+                  setUseCustomPerms(e.target.checked);
+                  if (!e.target.checked && form.role_id) {
+                    // Re-load role permissions
+                    rolesApi.get(form.role_id).then((r) => {
+                      if (r?.permission_codes) setSelectedPerms(new Set(r.permission_codes));
+                    });
+                  }
+                }}
+              />
+              <span className="text-slate-700">Customize permissions (override role defaults)</span>
+            </label>
+          </div>
+
+          {!useCustomPerms ? (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-600">
+              User will inherit all permissions from the <strong>{roles.find(r => r.id === form.role_id)?.name || 'selected role'}</strong> role.
+              Check "Customize permissions" above to select specific permissions.
+            </div>
+          ) : (
+            <div className="text-xs text-slate-500 mb-2">
+              Selected: <strong className="text-slate-700">{selectedPerms.size}</strong> permissions.
+              Uncheck items this user should NOT have access to.
+            </div>
+          )}
+
+          {useCustomPerms && (
+            <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-md p-3 space-y-3">
+              {Object.entries(grouped).map(([mod, perms]) => (
+                <div key={mod} className="border-b border-slate-100 pb-2 last:border-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="font-semibold text-slate-700 text-sm capitalize">{mod}</div>
+                    <button
+                      className="text-xs text-brand-600 hover:underline"
+                      onClick={() => toggleModule(perms)}
+                    >
+                      Toggle all
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                    {perms.map((p) => (
+                      <label key={p.id} className="flex items-start gap-2 p-1.5 rounded hover:bg-slate-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedPerms.has(p.code)}
+                          onChange={() => togglePerm(p.code)}
+                          className="mt-0.5"
+                        />
+                        <div>
+                          <div className="text-xs font-medium text-slate-900">{p.name}</div>
+                          <div className="text-[10px] text-slate-500 font-mono">{p.code}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </Modal>
   );

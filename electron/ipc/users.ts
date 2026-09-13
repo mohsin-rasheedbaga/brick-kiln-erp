@@ -106,6 +106,7 @@ export function registerUserHandlers(): void {
     role_id: string;
     department_id?: string;
     must_change_password?: boolean;
+    custom_permissions?: string[];  // JSON array of permission codes; overrides role permissions if set
   }): Promise<IpcResult<User>> => {
     return wrap(async () => {
       const session = getSession(args.token);
@@ -140,13 +141,15 @@ export function registerUserHandlers(): void {
       const passwordHash = bcrypt.hashSync(args.password, 10);
 
       transaction(db, () => {
+        const customPerms = args.custom_permissions && args.custom_permissions.length > 0
+          ? JSON.stringify(args.custom_permissions) : null;
         run(
           db,
           `INSERT INTO users (id, username, password_hash, full_name, email, phone, role_id, department_id,
-                             is_active, must_change_password, created_by, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, datetime('now'), datetime('now'))`,
+                             is_active, must_change_password, custom_permissions, created_by, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, datetime('now'), datetime('now'))`,
           id, username, passwordHash, args.full_name.trim(), args.email ?? null, args.phone ?? null,
-          args.role_id, args.department_id ?? null, args.must_change_password ? 1 : 0, session.userId
+          args.role_id, args.department_id ?? null, args.must_change_password ? 1 : 0, customPerms, session.userId
         );
         audit({
           userId: session.userId,
@@ -174,6 +177,7 @@ export function registerUserHandlers(): void {
     role_id?: string;
     department_id?: string;
     must_change_password?: boolean;
+    custom_permissions?: string[];  // set to [] to clear (use role defaults), or pass codes to override
   }): Promise<IpcResult<User>> => {
     return wrap(async () => {
       const session = getSession(args.token);
@@ -215,6 +219,11 @@ export function registerUserHandlers(): void {
       }
       if (args.must_change_password !== undefined) {
         updates.push('must_change_password = ?'); params.push(args.must_change_password ? 1 : 0);
+      }
+      if (args.custom_permissions !== undefined) {
+        const customPerms = args.custom_permissions.length > 0
+          ? JSON.stringify(args.custom_permissions) : null;
+        updates.push('custom_permissions = ?'); params.push(customPerms);
       }
 
       if (updates.length === 0) throw new Error('No fields to update.');

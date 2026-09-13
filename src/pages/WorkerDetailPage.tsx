@@ -7,11 +7,13 @@ import { useToastStore } from '../stores/toast';
 import {
   workers as workerApi, workTypes as wtApi,
   workerFamily as familyApi, workerAccount as accountApi,
+  workerAdvances as advApi, workerPayments as payApi,
 } from '../lib/ipc';
 import type { WorkerLedger, WorkType, WorkerFamily, WorkerAccountSummary } from '../types';
 import { formatCurrency, formatDate, formatNumber } from '../lib/utils';
-import { ArrowLeft, QrCode, Printer, Package, Wallet, TrendingUp, TrendingDown, Users2, Pencil } from 'lucide-react';
+import { ArrowLeft, QrCode, Printer, Package, Wallet, TrendingUp, TrendingDown, Users2, Pencil, FileText, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { WorkerCardPrint } from '../components/WorkerCardPrint';
+import { printHtml, reportHeader, buildTableHtml } from '../lib/export';
 
 export default function WorkerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +26,8 @@ export default function WorkerDetailPage() {
   const [account, setAccount] = useState<WorkerAccountSummary | null>(null);
   const [printing, setPrinting] = useState(false);
   const [showFamilyModal, setShowFamilyModal] = useState(false);
+  const [showQuickAdvance, setShowQuickAdvance] = useState(false);
+  const [showQuickPayment, setShowQuickPayment] = useState(false);
 
   const load = async () => {
     if (!id) return;
@@ -47,6 +51,64 @@ export default function WorkerDetailPage() {
 
   useEffect(() => { load(); }, [id]);
 
+  const handlePrintHistory = () => {
+    if (!ledger || !worker) return;
+    const kilnName = 'Brick Kiln ERP';
+    const body = reportHeader(kilnName, `Worker Account: ${worker.full_name} (${worker.worker_code})`) + `
+      <div class="grid-2">
+        <div>
+          <h3>Worker Information</h3>
+          <table>
+            <tr><td><strong>Code:</strong></td><td>${worker.worker_code}</td></tr>
+            <tr><td><strong>Name:</strong></td><td>${worker.full_name}</td></tr>
+            <tr><td><strong>Father:</strong></td><td>${worker.father_name || '—'}</td></tr>
+            <tr><td><strong>Mobile:</strong></td><td>${worker.mobile || '—'}</td></tr>
+            <tr><td><strong>CNIC:</strong></td><td>${worker.cnic || '—'}</td></tr>
+            <tr><td><strong>Department:</strong></td><td>${worker.department_name || '—'}</td></tr>
+            <tr><td><strong>Work Type:</strong></td><td>${worker.work_type_name || '—'}</td></tr>
+            <tr><td><strong>Rate/1000:</strong></td><td>Rs. ${worker.rate_per_1000.toFixed(0)}</td></tr>
+            <tr><td><strong>Status:</strong></td><td>${worker.status}</td></tr>
+            <tr><td><strong>Barcode:</strong></td><td>${worker.barcode}</td></tr>
+            ${family?.family_number ? `<tr><td><strong>Family No:</strong></td><td>${family.family_number}</td></tr>` : ''}
+          </table>
+        </div>
+        <div>
+          <h3>Account Summary</h3>
+          <div class="summary">
+            <div><strong>Total Production:</strong> ${formatNumber(totals.total_production_quantity)} bricks</div>
+            <div><strong>Total Earned:</strong> Rs. ${totals.total_labour_earned.toFixed(2)}</div>
+            <div><strong>Advances Taken:</strong> Rs. ${totals.total_advances.toFixed(2)}</div>
+            <div><strong>Payments Received:</strong> Rs. ${totals.total_payments.toFixed(2)}</div>
+            <div style="border-top:2px solid #0f172a; margin-top:8px; padding-top:8px; font-size:14px;">
+              <strong>Balance (Payable):</strong> Rs. ${totals.remaining_balance.toFixed(2)}
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3>Production History (${production.length} entries)</h3>
+      ${buildTableHtml(production, [
+        { key: 'date', label: 'Date' },
+        { key: 'stage', label: 'Stage' },
+        { key: 'quantity', label: 'Qty', align: 'right' as const, format: (v: number) => (v || 0).toLocaleString() },
+        { key: 'rate_per_1000', label: 'Rate', align: 'right' as const, format: (v: number) => 'Rs. ' + (v || 0).toFixed(0) },
+        { key: 'labour_amount', label: 'Amount', align: 'right' as const, format: (v: number) => 'Rs. ' + (v || 0).toFixed(2) },
+      ])}
+      <h3>Advances History (${advances.length} entries)</h3>
+      ${buildTableHtml(advances, [
+        { key: 'date', label: 'Date' },
+        { key: 'amount', label: 'Amount', align: 'right' as const, format: (v: number) => 'Rs. ' + (v || 0).toFixed(2) },
+        { key: 'description', label: 'Description' },
+      ])}
+      <h3>Payments History (${payments.length} entries)</h3>
+      ${buildTableHtml(payments, [
+        { key: 'date', label: 'Date' },
+        { key: 'amount', label: 'Amount', align: 'right' as const, format: (v: number) => 'Rs. ' + (v || 0).toFixed(2) },
+        { key: 'description', label: 'Description' },
+      ])}
+    `;
+    printHtml(`Worker History - ${worker.full_name}`, body);
+  };
+
   if (loading) return <Spinner className="mx-auto mt-12" />;
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!ledger) return <EmptyState title="Worker not found" />;
@@ -63,6 +125,15 @@ export default function WorkerDetailPage() {
         actions={
           <>
             <button className="btn-secondary" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /> Back</button>
+            <button className="btn-secondary text-amber-700" onClick={() => setShowQuickAdvance(true)}>
+              <ArrowUpCircle className="h-4 w-4" /> Cash Out
+            </button>
+            <button className="btn-secondary text-emerald-700" onClick={() => setShowQuickPayment(true)}>
+              <ArrowDownCircle className="h-4 w-4" /> Cash In
+            </button>
+            <button className="btn-secondary" onClick={handlePrintHistory}>
+              <FileText className="h-4 w-4" /> Print History
+            </button>
             <button className="btn-primary" onClick={() => setPrinting(true)}><Printer className="h-4 w-4" /> Print Card</button>
           </>
         }
@@ -331,6 +402,28 @@ export default function WorkerDetailPage() {
           onSaved={() => { setShowFamilyModal(false); load(); }}
         />
       )}
+
+      {/* Quick Cash Out (Advance) */}
+      {showQuickAdvance && (
+        <QuickCashModal
+          title={`Cash Out (Advance) — ${worker.full_name}`}
+          workerId={worker.id}
+          type="advance"
+          onClose={() => setShowQuickAdvance(false)}
+          onSaved={() => { setShowQuickAdvance(false); load(); }}
+        />
+      )}
+
+      {/* Quick Cash In (Payment) */}
+      {showQuickPayment && (
+        <QuickCashModal
+          title={`Cash In (Payment) — ${worker.full_name}`}
+          workerId={worker.id}
+          type="payment"
+          onClose={() => setShowQuickPayment(false)}
+          onSaved={() => { setShowQuickPayment(false); load(); }}
+        />
+      )}
     </div>
   );
 }
@@ -441,5 +534,99 @@ function StatBox({ label, value, icon: Icon, color }: { label: string; value: st
       </div>
       <div className="text-lg font-bold text-slate-900">{value}</div>
     </div>
+  );
+}
+
+function QuickCashModal({ title, workerId, type, onClose, onSaved }: {
+  title: string;
+  workerId: string;
+  type: 'advance' | 'payment';
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    amount: 0,
+    paymentMethod: 'cash',
+    description: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const pushToast = useToastStore((s) => s.push);
+
+  const handleSubmit = async () => {
+    if (!form.amount || form.amount <= 0) {
+      pushToast('warning', 'Amount must be positive.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const data = {
+        date: form.date,
+        workerId,
+        amount: Number(form.amount),
+        paymentMethod: form.paymentMethod,
+        description: form.description || undefined,
+      };
+      if (type === 'advance') {
+        await advApi.create(data);
+        pushToast('success', 'Cash Out (advance) recorded.');
+      } else {
+        await payApi.create(data);
+        pushToast('success', 'Cash In (payment) recorded.');
+      }
+      onSaved();
+    } catch (err: any) {
+      pushToast('error', err.message);
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={true}
+      onClose={onClose}
+      title={title}
+      size="sm"
+      footer={
+        <>
+          <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="btn-primary" onClick={handleSubmit} disabled={saving}>
+            {saving ? <Spinner size="sm" className="border-white" /> : 'Save'}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <div className={`p-3 rounded-md text-sm ${type === 'advance' ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'}`}>
+          {type === 'advance'
+            ? 'This will record an ADVANCE (cash given to the worker). Worker balance will decrease.'
+            : 'This will record a PAYMENT (cash received by the worker). Worker balance will increase.'
+          }
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Date</label>
+            <input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          </div>
+          <div>
+            <label className="label">Amount (Rs.) *</label>
+            <input type="number" min={0.01} step={0.01} className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} autoFocus />
+          </div>
+        </div>
+        <div>
+          <label className="label">Payment Method</label>
+          <select className="input" value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}>
+            <option value="cash">Cash</option>
+            <option value="bank">Bank</option>
+            <option value="cheque">Cheque</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label className="label">Description (optional)</label>
+          <input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. weekly advance, salary payment..." />
+        </div>
+      </div>
+    </Modal>
   );
 }

@@ -218,6 +218,18 @@ function runMigrations(): void {
     log.warn('[db-init] Migration v1.6.0 (settings columns) error:', err);
   }
 
+  // Migration v1.7.0: add custom_permissions column to users table
+  try {
+    const cols = all<{ name: string }>(db, "PRAGMA table_info(users)");
+    const colNames = new Set(cols.map((c) => c.name));
+    if (!colNames.has('custom_permissions')) {
+      log.info('[db-init] Migration v1.7.0: adding users.custom_permissions column');
+      db.exec('ALTER TABLE users ADD COLUMN custom_permissions TEXT');
+    }
+  } catch (err) {
+    log.warn('[db-init] Migration v1.7.0 (users.custom_permissions) error:', err);
+  }
+
   // Ensure schema_version is set to the latest
   run(db, "INSERT INTO app_meta (key, value, updated_at) VALUES ('schema_version', ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')", SCHEMA_VERSION);
 }

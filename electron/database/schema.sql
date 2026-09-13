@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS workers (
   department_id   TEXT NOT NULL,
   work_type_id    TEXT,                      -- references work_types table
   rate_per_1000   REAL NOT NULL DEFAULT 0,
+  custom_permissions TEXT,                   -- JSON array of permission codes (overrides role permissions if set)
   status          TEXT NOT NULL DEFAULT 'active'
                     CHECK (status IN ('active','inactive','left')),
   photo_path      TEXT,

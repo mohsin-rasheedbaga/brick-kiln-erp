@@ -145,3 +145,28 @@ export function loadRolePermissions(roleId: string): string[] {
   );
   return rows.map((r) => r.code);
 }
+
+/**
+ * Load permissions for a user.
+ * If user has custom_permissions set (JSON array), use those instead of role permissions.
+ * Otherwise, fall back to role permissions.
+ */
+export function loadUserPermissions(userId: string, roleId: string): string[] {
+  const db = getDb();
+  const userRow = get<{ custom_permissions: string | null }>(
+    db,
+    'SELECT custom_permissions FROM users WHERE id = ?',
+    userId
+  );
+  if (userRow?.custom_permissions) {
+    try {
+      const custom = JSON.parse(userRow.custom_permissions);
+      if (Array.isArray(custom) && custom.length > 0) {
+        return custom;
+      }
+    } catch (e) {
+      // Fall through to role permissions
+    }
+  }
+  return loadRolePermissions(roleId);
+}

@@ -12,7 +12,7 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import bcrypt from 'bcryptjs';
 import { getDb, get, run, transaction } from '../database/connection';
-import { createSession, revokeSession, getSession, hasPermission, hasAnyPermission, loadRolePermissions } from '../utils/session';
+import { createSession, revokeSession, getSession, hasPermission, hasAnyPermission, loadRolePermissions, loadUserPermissions } from '../utils/session';
 import { audit } from '../utils/audit';
 import { ok, err, wrap, type IpcResult } from '../utils/ipc';
 
@@ -104,8 +104,8 @@ export function registerAuthHandlers(): void {
         user.id
       );
 
-      // Load permissions
-      const permissions = loadRolePermissions(user.role_id);
+      // Load permissions (custom if set, otherwise role-based)
+      const permissions = loadUserPermissions(user.id, user.role_id);
 
       // Create session
       const session = createSession({

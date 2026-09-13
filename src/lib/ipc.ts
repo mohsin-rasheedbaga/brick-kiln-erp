@@ -166,6 +166,7 @@ export const users = {
   create: (data: {
     username: string; password: string; full_name: string; email?: string; phone?: string;
     role_id: string; department_id?: string; must_change_password?: boolean;
+    custom_permissions?: string[];
   }) => call<User>('users:create', data),
   update: (id: string, changes: {
     full_name?: string;
@@ -174,6 +175,7 @@ export const users = {
     role_id?: string;
     department_id?: string;
     must_change_password?: boolean;
+    custom_permissions?: string[];
   }) => call<User>('users:update', { id, ...changes }),
   setActive: (id: string, active: boolean) =>
     call<{ success: true }>('users:set-active', { id, active }),
