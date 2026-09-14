@@ -773,3 +773,57 @@ CREATE TABLE IF NOT EXISTS cloud_backup_history (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cloud_backup_date ON cloud_backup_history(backup_date);
+
+-- ============================================================
+-- 27. INVESTORS (Phase v2.0.0)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS investors (
+  id              TEXT PRIMARY KEY,
+  investor_code   TEXT NOT NULL UNIQUE,
+  name            TEXT NOT NULL,
+  mobile          TEXT,
+  address         TEXT,
+  cnic            TEXT,
+  joining_date    TEXT NOT NULL DEFAULT (date('now')),
+  total_investment REAL NOT NULL DEFAULT 0,
+  profit_share_pct REAL NOT NULL DEFAULT 0,    -- percentage of monthly profit
+  status          TEXT NOT NULL DEFAULT 'active'
+                    CHECK (status IN ('active','inactive','left')),
+  notes           TEXT,
+  created_by      TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_investors_status ON investors(status);
+
+-- ============================================================
+-- 28. INVESTOR TRANSACTIONS (investments in, profits paid out)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS investor_transactions (
+  id              TEXT PRIMARY KEY,
+  transaction_number TEXT NOT NULL UNIQUE,
+  date            TEXT NOT NULL DEFAULT (date('now')),
+  investor_id     TEXT NOT NULL,
+  type            TEXT NOT NULL
+                    CHECK (type IN ('investment_in','profit_paid','capital_withdraw','adjustment')),
+  amount          REAL NOT NULL CHECK (amount > 0),
+  reference_no    TEXT,
+  payment_method  TEXT NOT NULL DEFAULT 'cash'
+                    CHECK (payment_method IN ('cash','bank','cheque','other')),
+  description     TEXT,
+  entered_by      TEXT,
+  is_void         INTEGER NOT NULL DEFAULT 0,
+  void_reason     TEXT,
+  voided_by       TEXT,
+  voided_at       TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (investor_id) REFERENCES investors(id) ON DELETE CASCADE,
+  FOREIGN KEY (entered_by) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (voided_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_investor_txn_investor ON investor_transactions(investor_id);
+CREATE INDEX IF NOT EXISTS idx_investor_txn_date ON investor_transactions(date);
+CREATE INDEX IF NOT EXISTS idx_investor_txn_type ON investor_transactions(type);

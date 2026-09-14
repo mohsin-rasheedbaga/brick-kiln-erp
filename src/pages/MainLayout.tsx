@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, History, DatabaseBackup, RefreshCw, LogOut,
   Menu, X, UserCircle, ChevronDown, ShoppingCart, Wallet, Users2,
   BarChart3, Package as PackageIcon, Tags, CalendarCheck, Calculator,
-  Cloud,
+  Cloud, TrendingUp,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toast';
@@ -38,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/expenses',          label: 'Expenses',         icon: Wallet,          permission: 'expenses.view', group: 'Accounts' },
   { to: '/worker-payments',   label: 'Worker Pay',        icon: Users,           permission: 'worker_payments.view', group: 'Accounts' },
   { to: '/payroll',           label: 'Payroll Runs',      icon: Calculator,       permission: 'worker_payments.view', group: 'Accounts' },
+  { to: '/investors',         label: 'Investors',          icon: TrendingUp,       permission: 'accounts.view', group: 'Accounts' },
   { to: '/cash',              label: 'Cash Register',     icon: Wallet,          permission: 'accounts.view', group: 'Accounts' },
   { to: '/stock',             label: 'Stock',            icon: PackageIcon,     permission: 'stock.view', group: 'Accounts' },
 

@@ -3,6 +3,7 @@ import { PageHeader } from '../components/Card';
 import { Modal, ConfirmDialog } from '../components/Modal';
 import { Spinner, EmptyState } from '../components/Feedback';
 import { useToastStore } from '../stores/toast';
+import { useNavigate } from 'react-router-dom';
 import {
   workerAdvances as advApi, workerPayments as payApi, workers as workerApi,
   workerAccount as accountApi,
@@ -14,6 +15,7 @@ import { Plus, Ban, Search, Wallet, ArrowDownCircle, ArrowUpCircle } from 'lucid
 type TabKind = 'accounts' | 'advances' | 'payments';
 
 export default function WorkerPaymentsPage() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<TabKind>('accounts');
   const [advances, setAdvances] = useState<WorkerAdvance[]>([]);
   const [payments, setPayments] = useState<WorkerPayment[]>([]);
@@ -77,7 +79,10 @@ export default function WorkerPaymentsPage() {
         title="Worker Pay & Accounts"
         subtitle={
           tab === 'accounts'
-            ? `${accountSummaries.length} workers — Total payable: ${formatCurrency(accountSummaries.reduce((s, a) => s + a.balance, 0))}`
+            ? (() => {
+              const tb = accountSummaries.reduce((s, a) => s + a.balance, 0);
+              return `${accountSummaries.length} workers — ${tb > 0 ? `Total payable: ${formatCurrency(tb)}` : tb < 0 ? `Workers owe: ${formatCurrency(Math.abs(tb))}` : 'All settled'}`;
+            })()
             : tab === 'advances'
             ? `Total advances: ${formatCurrency(advTotal)}`
             : `Total payments: ${formatCurrency(payTotal)}`
@@ -152,13 +157,19 @@ export default function WorkerPaymentsPage() {
                   .map((acc) => (
                   <tr key={acc.worker.id} className="hover:bg-slate-50">
                     <td className="px-4 py-2 font-mono text-xs text-slate-500">{acc.worker.worker_code}</td>
-                    <td className="px-4 py-2 font-medium text-slate-900">{acc.worker.full_name}</td>
+                    <td className="px-4 py-2 font-medium text-slate-900">
+                      <button onClick={() => navigate(`/workers/${acc.worker.id}`)} className="hover:text-brand-600 hover:underline" title="View full account">
+                        {acc.worker.full_name}
+                      </button>
+                    </td>
                     <td className="px-4 py-2 text-slate-600 text-xs">{acc.worker.department_name || '—'}</td>
                     <td className="px-4 py-2 text-right font-mono text-slate-700">{formatNumber(acc.total_production_qty)}</td>
                     <td className="px-4 py-2 text-right font-mono text-emerald-700">{formatCurrency(acc.earned)}</td>
                     <td className="px-4 py-2 text-right font-mono text-amber-700">{formatCurrency(acc.advances_total)}</td>
                     <td className="px-4 py-2 text-right font-mono text-purple-700">{formatCurrency(acc.payments_total)}</td>
-                    <td className={`px-4 py-2 text-right font-mono font-bold ${acc.balance >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{formatCurrency(acc.balance)}</td>
+                    <td className={`px-4 py-2 text-right font-mono font-bold ${acc.balance > 0 ? 'text-emerald-700' : acc.balance < 0 ? 'text-red-700' : 'text-slate-500'}`}>
+                      {acc.balance > 0 ? formatCurrency(acc.balance) : acc.balance < 0 ? `${formatCurrency(Math.abs(acc.balance))} (owes)` : 'Rs. 0'}
+                    </td>
                     <td className="px-4 py-2 text-center">
                       <div className="inline-flex gap-1">
                         <button
@@ -187,8 +198,8 @@ export default function WorkerPaymentsPage() {
                   <td className="px-4 py-2 text-right font-mono font-bold text-emerald-700">{formatCurrency(accountSummaries.reduce((s, a) => s + a.earned, 0))}</td>
                   <td className="px-4 py-2 text-right font-mono font-bold text-amber-700">{formatCurrency(accountSummaries.reduce((s, a) => s + a.advances_total, 0))}</td>
                   <td className="px-4 py-2 text-right font-mono font-bold text-purple-700">{formatCurrency(accountSummaries.reduce((s, a) => s + a.payments_total, 0))}</td>
-                  <td className={`px-4 py-2 text-right font-mono font-bold ${accountSummaries.reduce((s, a) => s + a.balance, 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {formatCurrency(accountSummaries.reduce((s, a) => s + a.balance, 0))}
+                  <td className={`px-4 py-2 text-right font-mono font-bold ${accountSummaries.reduce((s, a) => s + a.balance, 0) > 0 ? 'text-emerald-700' : accountSummaries.reduce((s, a) => s + a.balance, 0) < 0 ? 'text-red-700' : 'text-slate-500'}`}>
+                    {(() => { const tb = accountSummaries.reduce((s, a) => s + a.balance, 0); return tb > 0 ? formatCurrency(tb) : tb < 0 ? `${formatCurrency(Math.abs(tb))} (owes)` : 'Rs. 0'; })()}
                   </td>
                   <td></td>
                 </tr>

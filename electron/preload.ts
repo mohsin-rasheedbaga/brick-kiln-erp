@@ -85,6 +85,10 @@ const ALLOWED_CHANNELS = new Set<string>([
   'cloud:gdrive-set-config', 'cloud:gdrive-auth-url', 'cloud:gdrive-exchange-code',
   'cloud:gdrive-disconnect', 'cloud:gdrive-status', 'cloud:gdrive-backup',
   'cloud:gdrive-list-backups', 'cloud:open-link',
+  // investors (Phase v2.0.0)
+  'investors:list', 'investors:get', 'investors:create', 'investors:update',
+  'investors:set-status', 'investors:delete', 'investors:add-transaction',
+  'investors:monthly-profit',
 ]);
 
 contextBridge.exposeInMainWorld('erp', {

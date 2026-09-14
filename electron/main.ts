@@ -50,6 +50,8 @@ import { registerPayrollHandlers } from './ipc/payroll';
 // Phase C modules
 import { registerCloudSyncHandlers } from './ipc/cloudSync';
 import * as gdriveService from './services/gdrive';
+// Phase v2.0.0 modules
+import { registerInvestorHandlers } from './ipc/investors';
 
 // Configure logging
 log.transports.file.level = 'info';
@@ -221,6 +223,8 @@ function registerIpcHandlers(): void {
   registerPayrollHandlers();
   // Phase C modules
   registerCloudSyncHandlers();
+  // Phase v2.0.0 modules
+  registerInvestorHandlers();
   log.info('[main] All IPC handlers registered.');
 }
 

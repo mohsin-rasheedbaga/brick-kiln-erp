@@ -637,3 +637,37 @@ export interface PayrollRunItem {
   worker_payment_id: string | null;
   payment_number?: string;
 }
+
+// ============== Phase v2.0.0 types ==============
+
+export interface Investor {
+  id: string;
+  investor_code: string;
+  name: string;
+  mobile: string | null;
+  address: string | null;
+  cnic: string | null;
+  joining_date: string;
+  total_investment: number;
+  profit_share_pct: number;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  current_balance?: number;
+  total_profit_paid?: number;
+}
+
+export interface InvestorTransaction {
+  id: string;
+  transaction_number: string;
+  date: string;
+  investor_id: string;
+  type: 'investment_in' | 'profit_paid' | 'capital_withdraw' | 'adjustment';
+  amount: number;
+  reference_no: string | null;
+  payment_method: string;
+  description: string | null;
+  is_void: boolean;
+  created_at: string;
+}

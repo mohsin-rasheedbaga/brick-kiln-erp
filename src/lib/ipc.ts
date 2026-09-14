@@ -25,6 +25,8 @@ import type {
   DailyProductionSummary,
   // Phase B types
   PayrollRun, PayrollRunItem,
+  // Phase v2.0.0 types
+  Investor, InvestorTransaction,
 } from '../types';
 
 const TOKEN_KEY = 'brick-kiln-erp-token';
@@ -523,4 +525,27 @@ export const cloud = {
     listBackups: () => call<any[]>('cloud:gdrive-list-backups'),
     openLink: (url: string) => call<{ success: true }>('cloud:open-link', { url }),
   },
+};
+
+// =================== Phase v2.0.0 APIs (Investors) ===================
+
+export const investors = {
+  list: (filters: { search?: string; includeInactive?: boolean } = {}) =>
+    call<Investor[]>('investors:list', filters),
+  get: (id: string) => call<{ investor: Investor; transactions: InvestorTransaction[] }>('investors:get', { id }),
+  create: (data: {
+    name: string; mobile?: string; address?: string; cnic?: string;
+    profit_share_pct?: number; initial_investment?: number; notes?: string;
+  }) => call<Investor>('investors:create', data),
+  update: (id: string, changes: any) => call<Investor>('investors:update', { id, ...changes }),
+  setStatus: (id: string, status: string) => call<{ success: true }>('investors:set-status', { id, status }),
+  delete: (id: string) => call<{ success: true }>('investors:delete', { id }),
+  addTransaction: (data: {
+    investorId: string; type: 'investment_in' | 'profit_paid' | 'capital_withdraw' | 'adjustment';
+    amount: number; date?: string; paymentMethod?: string; referenceNo?: string; description?: string;
+  }) => call<InvestorTransaction>('investors:add-transaction', data),
+  monthlyProfit: (month: string) => call<{
+    total_monthly_profit: number;
+    investors: Array<{ id: string; name: string; investor_code: string; profit_share_pct: number; profit_amount: number; current_balance: number }>;
+  }>('investors:monthly-profit', { month }),
 };
