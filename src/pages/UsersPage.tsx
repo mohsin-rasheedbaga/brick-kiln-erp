@@ -6,7 +6,7 @@ import { useToastStore } from '../stores/toast';
 import { users as userApi, roles as rolesApi, departments as deptApi } from '../lib/ipc';
 import type { User, Role, Department, Permission } from '../types';
 import { formatDate } from '../lib/utils';
-import { Plus, Edit2, Power, KeyRound } from 'lucide-react';
+import { Plus, Edit2, Power, KeyRound, Trash2 } from 'lucide-react';
 
 export default function UsersPage() {
   const [items, setItems] = useState<User[]>([]);
@@ -18,6 +18,7 @@ export default function UsersPage() {
   const [showModal, setShowModal] = useState(false);
   const [showInactive, setShowInactive] = useState(false);
   const [resetTarget, setResetTarget] = useState<User | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const pushToast = useToastStore((s) => s.push);
 
   const load = async () => {
@@ -46,6 +47,18 @@ export default function UsersPage() {
       pushToast('success', `${u.username} ${u.isActive ? 'disabled' : 'enabled'}.`);
       load();
     } catch (err: any) { pushToast('error', err.message); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await userApi.delete(deleteTarget.id);
+      pushToast('success', `User "${deleteTarget.username}" deleted.`);
+      load();
+    } catch (err: any) {
+      pushToast('error', err.message);
+    }
+    setDeleteTarget(null);
   };
 
   return (
@@ -102,7 +115,14 @@ export default function UsersPage() {
                     <div className="inline-flex gap-1">
                       <button onClick={() => { setEditing(u); setShowModal(true); }} className="btn-ghost btn-sm" title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
                       <button onClick={() => setResetTarget(u)} className="btn-ghost btn-sm" title="Reset password"><KeyRound className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => handleToggle(u)} className="btn-ghost btn-sm" title={u.isActive ? 'Disable' : 'Enable'}><Power className="h-3.5 w-3.5" /></button>
+                      {u.isActive ? (
+                        <button onClick={() => handleToggle(u)} className="btn-ghost btn-sm text-amber-600" title="Disable user"><Power className="h-3.5 w-3.5" /></button>
+                      ) : (
+                        <button onClick={() => handleToggle(u)} className="btn-ghost btn-sm text-emerald-600" title="Enable user"><Power className="h-3.5 w-3.5" /></button>
+                      )}
+                      {u.username !== 'admin' && (
+                        <button onClick={() => setDeleteTarget(u)} className="btn-ghost btn-sm text-red-600" title="Delete user"><Trash2 className="h-3.5 w-3.5" /></button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -119,6 +139,16 @@ export default function UsersPage() {
       {resetTarget && (
         <ResetPasswordDialog user={resetTarget} onClose={() => setResetTarget(null)} onDone={() => { setResetTarget(null); load(); }} />
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete User"
+        message={`Delete user "${deleteTarget?.username}" (${deleteTarget?.fullName})? This cannot be undone. All their sessions will be revoked. Audit records will be preserved but anonymized.`}
+        confirmText="Delete"
+        danger
+      />
     </div>
   );
 }

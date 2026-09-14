@@ -30,7 +30,7 @@ const ALLOWED_CHANNELS = new Set<string>([
   'production:create', 'production:list', 'production:update', 'production:delete',
   // users
   'users:list', 'users:get', 'users:create', 'users:update', 'users:set-active',
-  'users:reset-password',
+  'users:reset-password', 'users:delete',
   // roles
   'roles:list', 'roles:get', 'roles:create', 'roles:update', 'roles:delete',
   'roles:list-permissions', 'roles:set-permissions',

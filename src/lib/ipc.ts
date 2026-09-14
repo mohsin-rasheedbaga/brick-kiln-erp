@@ -182,6 +182,7 @@ export const users = {
     call<{ success: true }>('users:set-active', { id, active }),
   resetPassword: (id: string, newPassword: string, mustChange = true) =>
     call<{ success: true }>('users:reset-password', { id, newPassword, mustChange }),
+  delete: (id: string) => call<{ success: true }>('users:delete', { id }),
 };
 
 // Roles

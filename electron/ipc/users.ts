@@ -313,4 +313,45 @@ export function registerUserHandlers(): void {
       return { success: true } as const;
     })();
   });
+
+  // Delete user — only if not self and not the default admin
+  ipcMain.handle('users:delete', async (_evt, args: { token: string; id: string }): Promise<IpcResult<{ success: true }>> => {
+    return wrap(async () => {
+      const session = getSession(args.token);
+      if (!session) throw new Error('Session expired.');
+      if (!session.permissions.includes('users.manage') && session.roleId !== 'role-super-admin') {
+        throw new Error('You do not have permission to delete users.');
+      }
+      if (session.userId === args.id) {
+        throw new Error('You cannot delete your own account.');
+      }
+
+      const db = getDb();
+      const existing = get<{ username: string; role_id: string }>(db, 'SELECT username, role_id FROM users WHERE id = ?', args.id);
+      if (!existing) throw new Error('User not found.');
+
+      // Prevent deleting the default admin
+      if (existing.username === 'admin') {
+        throw new Error('The default admin account cannot be deleted. Disable it instead.');
+      }
+
+      transaction(db, () => {
+        // Clean up: revoke sessions, delete audit log references (keep audit records but null out user_id)
+        run(db, 'UPDATE sessions SET revoked_at = datetime(\'now\') WHERE user_id = ?', args.id);
+        run(db, 'UPDATE audit_log SET user_id = NULL WHERE user_id = ?', args.id);
+        // Delete the user
+        run(db, 'DELETE FROM users WHERE id = ?', args.id);
+        audit({
+          userId: session.userId,
+          username: session.username,
+          action: 'delete',
+          module: 'users',
+          entityId: args.id,
+          entityType: 'user',
+          description: `Deleted user ${existing.username}`,
+        });
+      });
+      return { success: true } as const;
+    })();
+  });
 }
