@@ -26,7 +26,12 @@ export default function WorkerPaymentsPage() {
   const [workerFilter, setWorkerFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [voidTarget, setVoidTarget] = useState<{ id: string; number: string; type: TabKind } | null>(null);
+  const [quickAction, setQuickAction] = useState<{ workerId: string; type: 'advance' | 'payment' } | null>(null);
   const pushToast = useToastStore((s) => s.push);
+
+  const handleQuickAction = (workerId: string, type: 'advance' | 'payment') => {
+    setQuickAction({ workerId, type });
+  };
 
   const load = async () => {
     setLoading(true);
@@ -133,12 +138,12 @@ export default function WorkerPaymentsPage() {
                   <th className="text-left px-4 py-3 font-semibold">Code</th>
                   <th className="text-left px-4 py-3 font-semibold">Name</th>
                   <th className="text-left px-4 py-3 font-semibold">Dept</th>
-                  <th className="text-right px-4 py-3 font-semibold">Days</th>
                   <th className="text-right px-4 py-3 font-semibold">Qty</th>
                   <th className="text-right px-4 py-3 font-semibold">Earned</th>
                   <th className="text-right px-4 py-3 font-semibold">Advances</th>
                   <th className="text-right px-4 py-3 font-semibold">Paid</th>
                   <th className="text-right px-4 py-3 font-semibold">Balance</th>
+                  <th className="text-center px-4 py-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -149,18 +154,35 @@ export default function WorkerPaymentsPage() {
                     <td className="px-4 py-2 font-mono text-xs text-slate-500">{acc.worker.worker_code}</td>
                     <td className="px-4 py-2 font-medium text-slate-900">{acc.worker.full_name}</td>
                     <td className="px-4 py-2 text-slate-600 text-xs">{acc.worker.department_name || '—'}</td>
-                    <td className="px-4 py-2 text-right font-mono text-slate-600">{acc.total_production_qty > 0 ? acc.last_activity_date ? '✓' : '—' : '—'}</td>
                     <td className="px-4 py-2 text-right font-mono text-slate-700">{formatNumber(acc.total_production_qty)}</td>
                     <td className="px-4 py-2 text-right font-mono text-emerald-700">{formatCurrency(acc.earned)}</td>
                     <td className="px-4 py-2 text-right font-mono text-amber-700">{formatCurrency(acc.advances_total)}</td>
                     <td className="px-4 py-2 text-right font-mono text-purple-700">{formatCurrency(acc.payments_total)}</td>
                     <td className={`px-4 py-2 text-right font-mono font-bold ${acc.balance >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{formatCurrency(acc.balance)}</td>
+                    <td className="px-4 py-2 text-center">
+                      <div className="inline-flex gap-1">
+                        <button
+                          onClick={() => handleQuickAction(acc.worker.id, 'advance')}
+                          className="btn-ghost btn-sm text-amber-600"
+                          title="Cash Out (Advance)"
+                        >
+                          <ArrowUpCircle className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleQuickAction(acc.worker.id, 'payment')}
+                          className="btn-ghost btn-sm text-emerald-600"
+                          title="Cash In (Payment)"
+                        >
+                          <ArrowDownCircle className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-slate-50">
                 <tr>
-                  <td colSpan={4} className="px-4 py-2 font-semibold text-slate-700">Totals ({accountSummaries.length} workers)</td>
+                  <td colSpan={3} className="px-4 py-2 font-semibold text-slate-700">Totals ({accountSummaries.length} workers)</td>
                   <td className="px-4 py-2 text-right font-mono font-bold text-slate-900">{formatNumber(accountSummaries.reduce((s, a) => s + a.total_production_qty, 0))}</td>
                   <td className="px-4 py-2 text-right font-mono font-bold text-emerald-700">{formatCurrency(accountSummaries.reduce((s, a) => s + a.earned, 0))}</td>
                   <td className="px-4 py-2 text-right font-mono font-bold text-amber-700">{formatCurrency(accountSummaries.reduce((s, a) => s + a.advances_total, 0))}</td>
@@ -168,6 +190,7 @@ export default function WorkerPaymentsPage() {
                   <td className={`px-4 py-2 text-right font-mono font-bold ${accountSummaries.reduce((s, a) => s + a.balance, 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                     {formatCurrency(accountSummaries.reduce((s, a) => s + a.balance, 0))}
                   </td>
+                  <td></td>
                 </tr>
               </tfoot>
             </table>
@@ -240,6 +263,16 @@ export default function WorkerPaymentsPage() {
           target={voidTarget}
           onClose={() => setVoidTarget(null)}
           onDone={() => { setVoidTarget(null); load(); }}
+        />
+      )}
+
+      {quickAction && (
+        <QuickCashModal
+          workerId={quickAction.workerId}
+          type={quickAction.type}
+          workers={workers}
+          onClose={() => setQuickAction(null)}
+          onSaved={() => { setQuickAction(null); load(); }}
         />
       )}
     </div>
@@ -393,6 +426,98 @@ function VoidDialog({ target, onClose, onDone }: {
         <div>
           <label className="label">Reason *</label>
           <textarea className="input" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function QuickCashModal({ workerId, type, workers, onClose, onSaved }: {
+  workerId: string;
+  type: 'advance' | 'payment';
+  workers: Worker[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const worker = workers.find((w) => w.id === workerId);
+  const [form, setForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    amount: 0,
+    paymentMethod: 'cash',
+    description: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const pushToast = useToastStore((s) => s.push);
+
+  const handleSubmit = async () => {
+    if (!form.amount || form.amount <= 0) { pushToast('warning', 'Amount must be positive.'); return; }
+    setSaving(true);
+    try {
+      const data = {
+        date: form.date,
+        workerId,
+        amount: Number(form.amount),
+        paymentMethod: form.paymentMethod,
+        description: form.description || undefined,
+      };
+      if (type === 'advance') {
+        await advApi.create(data);
+        pushToast('success', 'Cash Out (advance) recorded.');
+      } else {
+        await payApi.create(data);
+        pushToast('success', 'Cash In (payment) recorded.');
+      }
+      onSaved();
+    } catch (err: any) {
+      pushToast('error', err.message);
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={true}
+      onClose={onClose}
+      title={type === 'advance' ? `Cash Out (Advance) — ${worker?.full_name || ''}` : `Cash In (Payment) — ${worker?.full_name || ''}`}
+      size="sm"
+      footer={
+        <>
+          <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="btn-primary" onClick={handleSubmit} disabled={saving}>
+            {saving ? <Spinner size="sm" className="border-white" /> : 'Save'}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <div className={`p-3 rounded-md text-sm ${type === 'advance' ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'}`}>
+          {type === 'advance'
+            ? 'Cash Out: Recording an ADVANCE (cash given to the worker). Worker balance will decrease.'
+            : 'Cash In: Recording a PAYMENT (cash paid to the worker). Worker balance will decrease by payment amount.'
+          }
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Date</label>
+            <input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          </div>
+          <div>
+            <label className="label">Amount (Rs.) *</label>
+            <input type="number" min={0.01} step={0.01} className="input" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} autoFocus />
+          </div>
+        </div>
+        <div>
+          <label className="label">Payment Method</label>
+          <select className="input" value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}>
+            <option value="cash">Cash</option>
+            <option value="bank">Bank</option>
+            <option value="cheque">Cheque</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label className="label">Description (optional)</label>
+          <input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. weekly advance, salary payment..." />
         </div>
       </div>
     </Modal>

@@ -255,7 +255,7 @@ function runMigrations(): void {
   try {
     log.info('[db-init] Migration v1.9.5: cleaning accountant role permissions');
     run(db, `DELETE FROM role_permissions WHERE role_id = 'role-accountant' AND permission_id IN (
-      SELECT id FROM permissions WHERE code IN ('production.view','sales.view','sales.create','sales.edit','sales.void')
+      SELECT id FROM permissions WHERE code IN ('production.view','sales.view','sales.create','sales.edit','sales.void','customers.view')
     )`);
   } catch (err) {
     log.warn('[db-init] Migration v1.9.5 (accountant permissions) error:', err);

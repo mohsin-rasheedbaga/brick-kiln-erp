@@ -189,10 +189,13 @@ export function registerWorkerHandlers(): void {
       const where: string[] = [];
       const params: any[] = [];
 
-      // Phase v1.9.0: Department-scoped access — if user has a department_id and
-      // is not super-admin, force-filter to their department only.
-      // This means supervisors only see their own department's workers.
-      if (session.departmentId && session.roleId !== 'role-super-admin') {
+      // Phase v1.9.6: Department-scoped access — ONLY for department operators.
+      // Accountant, Manager, Admin see ALL workers regardless of their department_id.
+      const OPERATOR_ROLES = [
+        'role-raw-maker', 'role-transport', 'role-kiln-load', 'role-kiln-unload', 'role-sales'
+      ];
+      const isOperator = OPERATOR_ROLES.includes(session.roleId);
+      if (session.departmentId && isOperator) {
         where.push('w.department_id = ?');
         params.push(session.departmentId);
       }

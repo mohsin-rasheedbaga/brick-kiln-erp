@@ -192,10 +192,11 @@ export function registerProductionHandlers(): void {
       if (!args.workerId) throw new Error('Worker is required.');
       if (!args.workTypeId) throw new Error('Work type is required.');
 
-      // Phase v1.9.0: Auto-set department from session if supervisor has department_id
-      // This means supervisors don't need to select their department — it's automatic.
+      // Phase v1.9.6: Auto-set department from session if user is an operator
+      const OPERATOR_ROLES = ['role-raw-maker', 'role-transport', 'role-kiln-load', 'role-kiln-unload', 'role-sales'];
+      const isOperator = OPERATOR_ROLES.includes(session.roleId);
       let departmentId = args.departmentId;
-      if (!departmentId && session.departmentId && session.roleId !== 'role-super-admin') {
+      if (!departmentId && session.departmentId && isOperator) {
         departmentId = session.departmentId;
       }
       if (!departmentId) throw new Error('Department is required.');
@@ -313,8 +314,10 @@ export function registerProductionHandlers(): void {
       const where: string[] = [];
       const params: any[] = [];
 
-      // Phase v1.9.0: Department-scoped access — supervisors see only their dept's production
-      if (session.departmentId && session.roleId !== 'role-super-admin') {
+      // Phase v1.9.6: Department-scoped access — ONLY for operators, not accountant/manager
+      const OPERATOR_ROLES = ['role-raw-maker', 'role-transport', 'role-kiln-load', 'role-kiln-unload', 'role-sales'];
+      const isOperator = OPERATOR_ROLES.includes(session.roleId);
+      if (session.departmentId && isOperator) {
         where.push('pe.department_id = ?');
         params.push(session.departmentId);
       }

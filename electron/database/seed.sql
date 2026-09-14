@@ -186,7 +186,7 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
   WHERE code IN (
     'dashboard.view','workers.view','workers.ledger',
     'labour.view','batches.view','stock.view',
-    'customers.view','customers.ledger','customers.payment',
+    'customers.ledger','customers.payment',
     'expenses.view','expenses.create','expenses.edit','expenses.void',
     'worker_payments.view','worker_payments.create','worker_payments.advance',
     'accounts.view','cash.manage','reports.view','reports.export'
