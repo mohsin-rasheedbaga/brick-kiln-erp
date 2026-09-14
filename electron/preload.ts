@@ -89,6 +89,8 @@ const ALLOWED_CHANNELS = new Set<string>([
   'investors:list', 'investors:get', 'investors:create', 'investors:update',
   'investors:set-status', 'investors:delete', 'investors:add-transaction',
   'investors:monthly-profit',
+  // withdraw earnings (Phase v2.1.0)
+  'workers:withdraw-earnings', 'workers:weekly-summary',
 ]);
 
 contextBridge.exposeInMainWorld('erp', {

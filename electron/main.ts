@@ -52,6 +52,7 @@ import { registerCloudSyncHandlers } from './ipc/cloudSync';
 import * as gdriveService from './services/gdrive';
 // Phase v2.0.0 modules
 import { registerInvestorHandlers } from './ipc/investors';
+import { registerWithdrawHandlers } from './ipc/withdraw';
 
 // Configure logging
 log.transports.file.level = 'info';
@@ -225,6 +226,7 @@ function registerIpcHandlers(): void {
   registerCloudSyncHandlers();
   // Phase v2.0.0 modules
   registerInvestorHandlers();
+  registerWithdrawHandlers();
   log.info('[main] All IPC handlers registered.');
 }
 

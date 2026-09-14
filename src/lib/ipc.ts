@@ -549,3 +549,32 @@ export const investors = {
     investors: Array<{ id: string; name: string; investor_code: string; profit_share_pct: number; profit_amount: number; current_balance: number }>;
   }>('investors:monthly-profit', { month }),
 };
+
+// =================== Phase v2.1.0 APIs (Withdraw) ===================
+
+export const withdraw = {
+  earnings: (data: {
+    workerId: string;
+    payAmount: number;
+    deductFromAdvance: boolean;
+    deductionAmount: number;
+    description?: string;
+  }) => call<{
+    payment_number: string;
+    advance_number: string | null;
+    payAmount: number;
+    deductionAmount: number;
+    newBalance: number;
+  }>('workers:withdraw-earnings', data),
+  weeklySummary: (workerId: string) => call<{
+    earned_this_week: number;
+    advances_this_week: number;
+    payments_this_week: number;
+    total_earned: number;
+    total_advances: number;
+    total_payments: number;
+    balance: number;
+    week_start: string;
+    week_end: string;
+  }>('workers:weekly-summary', { workerId }),
+};

@@ -63,6 +63,22 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      {/* Cash Balance — prominent for accountant */}
+      {canSeeAccounts && (
+        <div className="card p-5 bg-gradient-to-br from-brand-600 to-brand-800 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs text-brand-100 uppercase tracking-wider font-medium">Total Cash Balance</div>
+              <div className="text-3xl font-bold mt-1">{formatCurrency(stats.cash_balance)}</div>
+              <div className="text-xs text-brand-200 mt-1">
+                Received today: {formatCurrency(stats.today.cash_received)} · Expenses today: {formatCurrency(stats.today.expenses_total)}
+              </div>
+            </div>
+            <Wallet className="h-10 w-10 text-brand-200" />
+          </div>
+        </div>
+      )}
+
       {/* Today's activity cards — shown based on permissions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {canSeeProduction && (

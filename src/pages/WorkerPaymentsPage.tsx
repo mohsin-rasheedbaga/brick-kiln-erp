@@ -11,6 +11,7 @@ import {
 import type { WorkerAdvance, WorkerPayment, Worker, WorkerAccountSummary } from '../types';
 import { formatCurrency, formatDate, formatNumber } from '../lib/utils';
 import { Plus, Ban, Search, Wallet, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { WorkerAccountModal } from '../components/WorkerAccountModal';
 
 type TabKind = 'accounts' | 'advances' | 'payments';
 
@@ -29,6 +30,7 @@ export default function WorkerPaymentsPage() {
   const [showModal, setShowModal] = useState(false);
   const [voidTarget, setVoidTarget] = useState<{ id: string; number: string; type: TabKind } | null>(null);
   const [quickAction, setQuickAction] = useState<{ workerId: string; type: 'advance' | 'payment' } | null>(null);
+  const [accountModalWorker, setAccountModalWorker] = useState<{ id: string; name: string; code: string } | null>(null);
   const pushToast = useToastStore((s) => s.push);
 
   const handleQuickAction = (workerId: string, type: 'advance' | 'payment') => {
@@ -158,7 +160,11 @@ export default function WorkerPaymentsPage() {
                   <tr key={acc.worker.id} className="hover:bg-slate-50">
                     <td className="px-4 py-2 font-mono text-xs text-slate-500">{acc.worker.worker_code}</td>
                     <td className="px-4 py-2 font-medium text-slate-900">
-                      <button onClick={() => navigate(`/workers/${acc.worker.id}`)} className="hover:text-brand-600 hover:underline" title="View full account">
+                      <button
+                        onClick={() => setAccountModalWorker({ id: acc.worker.id, name: acc.worker.full_name, code: acc.worker.worker_code })}
+                        className="hover:text-brand-600 hover:underline"
+                        title="Open account — view earnings, withdraw, deduct advance"
+                      >
                         {acc.worker.full_name}
                       </button>
                     </td>
@@ -284,6 +290,16 @@ export default function WorkerPaymentsPage() {
           workers={workers}
           onClose={() => setQuickAction(null)}
           onSaved={() => { setQuickAction(null); load(); }}
+        />
+      )}
+
+      {accountModalWorker && (
+        <WorkerAccountModal
+          workerId={accountModalWorker.id}
+          workerName={accountModalWorker.name}
+          workerCode={accountModalWorker.code}
+          onClose={() => setAccountModalWorker(null)}
+          onSaved={() => load()}
         />
       )}
     </div>
