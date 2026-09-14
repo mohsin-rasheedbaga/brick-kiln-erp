@@ -184,9 +184,9 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
 INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
   SELECT 'role-accountant', id FROM permissions
   WHERE code IN (
-    'dashboard.view','production.view','workers.view','workers.ledger',
+    'dashboard.view','workers.view','workers.ledger',
     'labour.view','batches.view','stock.view',
-    'sales.view','customers.view','customers.ledger','customers.payment',
+    'customers.view','customers.ledger','customers.payment',
     'expenses.view','expenses.create','expenses.edit','expenses.void',
     'worker_payments.view','worker_payments.create','worker_payments.advance',
     'accounts.view','cash.manage','reports.view','reports.export'

@@ -5,18 +5,20 @@ import { Spinner, EmptyState } from '../components/Feedback';
 import { useToastStore } from '../stores/toast';
 import {
   workerAdvances as advApi, workerPayments as payApi, workers as workerApi,
+  workerAccount as accountApi,
 } from '../lib/ipc';
-import type { WorkerAdvance, WorkerPayment, Worker } from '../types';
-import { formatCurrency, formatDate } from '../lib/utils';
+import type { WorkerAdvance, WorkerPayment, Worker, WorkerAccountSummary } from '../types';
+import { formatCurrency, formatDate, formatNumber } from '../lib/utils';
 import { Plus, Ban, Search, Wallet, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 
-type TabKind = 'advances' | 'payments';
+type TabKind = 'accounts' | 'advances' | 'payments';
 
 export default function WorkerPaymentsPage() {
-  const [tab, setTab] = useState<TabKind>('advances');
+  const [tab, setTab] = useState<TabKind>('accounts');
   const [advances, setAdvances] = useState<WorkerAdvance[]>([]);
   const [payments, setPayments] = useState<WorkerPayment[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
+  const [accountSummaries, setAccountSummaries] = useState<WorkerAccountSummary[]>([]);
   const [advTotal, setAdvTotal] = useState(0);
   const [payTotal, setPayTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -30,14 +32,8 @@ export default function WorkerPaymentsPage() {
     setLoading(true);
     try {
       const [adv, pay, ws] = await Promise.all([
-        advApi.list({
-          workerId: workerFilter || undefined,
-          limit: 100,
-        }),
-        payApi.list({
-          workerId: workerFilter || undefined,
-          limit: 100,
-        }),
+        advApi.list({ workerId: workerFilter || undefined, limit: 100 }),
+        payApi.list({ workerId: workerFilter || undefined, limit: 100 }),
         workerApi.list({ limit: 1000 }),
       ]);
       setAdvances(adv.items);
@@ -45,6 +41,12 @@ export default function WorkerPaymentsPage() {
       setAdvTotal(adv.totalAmount);
       setPayTotal(pay.totalAmount);
       setWorkers(ws.items);
+
+      // Load account summaries for all workers (for the "accounts" tab)
+      const summaries = await Promise.all(
+        ws.items.map((w) => accountApi.summary(w.id).catch(() => null))
+      );
+      setAccountSummaries(summaries.filter((s): s is WorkerAccountSummary => s !== null));
     } catch (err: any) { pushToast('error', err.message); }
     finally { setLoading(false); }
   };
@@ -67,22 +69,32 @@ export default function WorkerPaymentsPage() {
   return (
     <div>
       <PageHeader
-        title="Worker Advances & Payments"
+        title="Worker Pay & Accounts"
         subtitle={
-          tab === 'advances'
+          tab === 'accounts'
+            ? `${accountSummaries.length} workers — Total payable: ${formatCurrency(accountSummaries.reduce((s, a) => s + a.balance, 0))}`
+            : tab === 'advances'
             ? `Total advances: ${formatCurrency(advTotal)}`
             : `Total payments: ${formatCurrency(payTotal)}`
         }
         actions={
-          <button className="btn-primary" onClick={() => setShowModal(true)}>
-            <Plus className="h-4 w-4" /> New {tab === 'advances' ? 'Advance' : 'Payment'}
-          </button>
+          tab !== 'accounts' && (
+            <button className="btn-primary" onClick={() => setShowModal(true)}>
+              <Plus className="h-4 w-4" /> New {tab === 'advances' ? 'Advance' : 'Payment'}
+            </button>
+          )
         }
       />
 
       <div className="card p-3 mb-4">
         <div className="flex flex-wrap gap-3 items-center">
           <div className="flex bg-slate-100 rounded-md p-0.5">
+            <button
+              onClick={() => setTab('accounts')}
+              className={`px-3 py-1.5 text-sm font-medium rounded ${tab === 'accounts' ? 'bg-white shadow text-brand-700' : 'text-slate-600'}`}
+            >
+              <Wallet className="h-4 w-4 inline mr-1" /> Worker Accounts ({accountSummaries.length})
+            </button>
             <button
               onClick={() => setTab('advances')}
               className={`px-3 py-1.5 text-sm font-medium rounded ${tab === 'advances' ? 'bg-white shadow text-brand-700' : 'text-slate-600'}`}
@@ -109,6 +121,58 @@ export default function WorkerPaymentsPage() {
 
       {loading ? (
         <Spinner className="mx-auto mt-12" />
+      ) : tab === 'accounts' ? (
+        /* Worker Accounts tab — shows each worker's production, earnings, balance */
+        accountSummaries.length === 0 ? (
+          <EmptyState title="No workers found" message="Add workers first to see their accounts." icon={<Wallet className="h-8 w-8" />} />
+        ) : (
+          <div className="card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
+                <tr>
+                  <th className="text-left px-4 py-3 font-semibold">Code</th>
+                  <th className="text-left px-4 py-3 font-semibold">Name</th>
+                  <th className="text-left px-4 py-3 font-semibold">Dept</th>
+                  <th className="text-right px-4 py-3 font-semibold">Days</th>
+                  <th className="text-right px-4 py-3 font-semibold">Qty</th>
+                  <th className="text-right px-4 py-3 font-semibold">Earned</th>
+                  <th className="text-right px-4 py-3 font-semibold">Advances</th>
+                  <th className="text-right px-4 py-3 font-semibold">Paid</th>
+                  <th className="text-right px-4 py-3 font-semibold">Balance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {accountSummaries
+                  .filter((a) => !search || a.worker.full_name.toLowerCase().includes(search.toLowerCase()) || a.worker.worker_code.toLowerCase().includes(search.toLowerCase()))
+                  .map((acc) => (
+                  <tr key={acc.worker.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-2 font-mono text-xs text-slate-500">{acc.worker.worker_code}</td>
+                    <td className="px-4 py-2 font-medium text-slate-900">{acc.worker.full_name}</td>
+                    <td className="px-4 py-2 text-slate-600 text-xs">{acc.worker.department_name || '—'}</td>
+                    <td className="px-4 py-2 text-right font-mono text-slate-600">{acc.total_production_qty > 0 ? acc.last_activity_date ? '✓' : '—' : '—'}</td>
+                    <td className="px-4 py-2 text-right font-mono text-slate-700">{formatNumber(acc.total_production_qty)}</td>
+                    <td className="px-4 py-2 text-right font-mono text-emerald-700">{formatCurrency(acc.earned)}</td>
+                    <td className="px-4 py-2 text-right font-mono text-amber-700">{formatCurrency(acc.advances_total)}</td>
+                    <td className="px-4 py-2 text-right font-mono text-purple-700">{formatCurrency(acc.payments_total)}</td>
+                    <td className={`px-4 py-2 text-right font-mono font-bold ${acc.balance >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{formatCurrency(acc.balance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-slate-50">
+                <tr>
+                  <td colSpan={4} className="px-4 py-2 font-semibold text-slate-700">Totals ({accountSummaries.length} workers)</td>
+                  <td className="px-4 py-2 text-right font-mono font-bold text-slate-900">{formatNumber(accountSummaries.reduce((s, a) => s + a.total_production_qty, 0))}</td>
+                  <td className="px-4 py-2 text-right font-mono font-bold text-emerald-700">{formatCurrency(accountSummaries.reduce((s, a) => s + a.earned, 0))}</td>
+                  <td className="px-4 py-2 text-right font-mono font-bold text-amber-700">{formatCurrency(accountSummaries.reduce((s, a) => s + a.advances_total, 0))}</td>
+                  <td className="px-4 py-2 text-right font-mono font-bold text-purple-700">{formatCurrency(accountSummaries.reduce((s, a) => s + a.payments_total, 0))}</td>
+                  <td className={`px-4 py-2 text-right font-mono font-bold ${accountSummaries.reduce((s, a) => s + a.balance, 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                    {formatCurrency(accountSummaries.reduce((s, a) => s + a.balance, 0))}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )
       ) : items.length === 0 ? (
         <EmptyState title={`No ${tab} found`} message={`Record your first ${tab === 'advances' ? 'worker advance' : 'worker payment'}.`} icon={<Plus className="h-8 w-8" />} />
       ) : (

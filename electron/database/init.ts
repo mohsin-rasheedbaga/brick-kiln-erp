@@ -250,6 +250,17 @@ function runMigrations(): void {
     log.warn('[db-init] Migration v1.8.0 (workers salary columns) error:', err);
   }
 
+  // Migration v1.9.5: Remove production.view and sales.view from accountant role
+  // Accountant should NOT see Production or Sales pages — only financial modules.
+  try {
+    log.info('[db-init] Migration v1.9.5: cleaning accountant role permissions');
+    run(db, `DELETE FROM role_permissions WHERE role_id = 'role-accountant' AND permission_id IN (
+      SELECT id FROM permissions WHERE code IN ('production.view','sales.view','sales.create','sales.edit','sales.void')
+    )`);
+  } catch (err) {
+    log.warn('[db-init] Migration v1.9.5 (accountant permissions) error:', err);
+  }
+
   // Ensure schema_version is set to the latest
   run(db, "INSERT INTO app_meta (key, value, updated_at) VALUES ('schema_version', ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')", SCHEMA_VERSION);
 }

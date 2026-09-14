@@ -20,22 +20,26 @@ type ReportType =
   | 'production' | 'sales' | 'expenses' | 'customers'
   | 'workers' | 'batch-costing' | 'profit-loss' | 'cash-flow' | 'stock';
 
-const REPORT_TYPES: Array<{ value: ReportType; label: string; icon: React.ElementType; description: string }> = [
-  { value: 'production',   label: 'Production Report',       icon: Package,       description: 'Production quantities and labour by stage, worker, or day' },
-  { value: 'sales',        label: 'Sales Report',             icon: ShoppingCart,  description: 'Sales totals, invoices, and outstanding balances' },
-  { value: 'expenses',     label: 'Expense Report',          icon: Wallet,        description: 'Expenses by category, department, or batch' },
-  { value: 'customers',    label: 'Customer Balances',       icon: Users,         description: 'All customers with sales, paid, and balances' },
-  { value: 'workers',     label: 'Worker Labour',            icon: Users,         description: 'Worker labour earnings, advances, payments, payable' },
-  { value: 'batch-costing', label: 'Batch Costing',          icon: Boxes,         description: 'Batch costs, revenue, profit/loss per batch' },
-  { value: 'profit-loss',  label: 'Profit & Loss',            icon: TrendingUp,    description: 'Overall revenue, costs, profit/loss for a period' },
-  { value: 'cash-flow',    label: 'Cash Flow',                icon: Banknote,      description: 'Cash in/out by movement type' },
-  { value: 'stock',       label: 'Stock Report',              icon: Boxes,         description: 'Stock levels and movement summary' },
+const ALL_REPORT_TYPES: Array<{ value: ReportType; label: string; icon: React.ElementType; description: string; requiredPermission: string }> = [
+  { value: 'production',   label: 'Production Report',       icon: Package,       description: 'Production quantities and labour by stage, worker, or day', requiredPermission: 'production.view' },
+  { value: 'sales',        label: 'Sales Report',             icon: ShoppingCart,  description: 'Sales totals, invoices, and outstanding balances', requiredPermission: 'sales.view' },
+  { value: 'expenses',     label: 'Expense Report',          icon: Wallet,        description: 'Expenses by category, department, or batch', requiredPermission: 'expenses.view' },
+  { value: 'customers',    label: 'Customer Balances',       icon: Users,         description: 'All customers with sales, paid, and balances', requiredPermission: 'customers.view' },
+  { value: 'workers',     label: 'Worker Labour',            icon: Users,         description: 'Worker labour earnings, advances, payments, payable', requiredPermission: 'worker_payments.view' },
+  { value: 'batch-costing', label: 'Batch Costing',          icon: Boxes,         description: 'Batch costs, revenue, profit/loss per batch', requiredPermission: 'batches.view' },
+  { value: 'profit-loss',  label: 'Profit & Loss',            icon: TrendingUp,    description: 'Overall revenue, costs, profit/loss for a period', requiredPermission: 'accounts.view' },
+  { value: 'cash-flow',    label: 'Cash Flow',                icon: Banknote,      description: 'Cash in/out by movement type', requiredPermission: 'accounts.view' },
+  { value: 'stock',       label: 'Stock Report',              icon: Boxes,         description: 'Stock levels and movement summary', requiredPermission: 'stock.view' },
 ];
 
 export default function ReportsPage() {
   const { hasPermission } = useAuthStore();
   const pushToast = useToastStore((s) => s.push);
-  const [activeReport, setActiveReport] = useState<ReportType>('production');
+
+  // Filter report types based on user permissions — each user only sees reports they can access
+  const REPORT_TYPES = ALL_REPORT_TYPES.filter((r) => hasPermission(r.requiredPermission));
+
+  const [activeReport, setActiveReport] = useState<ReportType>(REPORT_TYPES.length > 0 ? REPORT_TYPES[0].value : 'production');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [data, setData] = useState<any>(null);
