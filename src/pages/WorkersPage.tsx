@@ -4,6 +4,7 @@ import { PageHeader } from '../components/Card';
 import { Modal, ConfirmDialog } from '../components/Modal';
 import { Spinner, EmptyState } from '../components/Feedback';
 import { useToastStore } from '../stores/toast';
+import { useAuthStore } from '../stores/auth';
 import { workers as workerApi, departments as deptApi, workTypes as wtApi } from '../lib/ipc';
 import type { Worker, Department, WorkType } from '../types';
 import { Plus, Edit2, Search, Eye, QrCode, Barcode, FileText, Filter } from 'lucide-react';
@@ -11,6 +12,10 @@ import { WorkerCardPrint } from '../components/WorkerCardPrint';
 
 export default function WorkersPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuthStore();
+  const canCreateWorker = hasPermission('workers.create');
+  const canEditWorker = hasPermission('workers.edit');
+  const canDeleteWorker = hasPermission('workers.delete');
   const [items, setItems] = useState<Worker[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -63,9 +68,11 @@ export default function WorkersPage() {
         title="Workers"
         subtitle={`${total} worker${total === 1 ? '' : 's'} total`}
         actions={
-          <button className="btn-primary" onClick={() => { setEditing(null); setShowModal(true); }}>
-            <Plus className="h-4 w-4" /> Add Worker
-          </button>
+          canCreateWorker && (
+            <button className="btn-primary" onClick={() => { setEditing(null); setShowModal(true); }}>
+              <Plus className="h-4 w-4" /> Add Worker
+            </button>
+          )
         }
       />
 
@@ -136,9 +143,11 @@ export default function WorkersPage() {
                       <button onClick={() => setPrintingWorker(w)} className="btn-ghost btn-sm" title="Print card">
                         <QrCode className="h-3.5 w-3.5" />
                       </button>
-                      <button onClick={() => { setEditing(w); setShowModal(true); }} className="btn-ghost btn-sm" title="Edit">
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </button>
+                      {canEditWorker && (
+                        <button onClick={() => { setEditing(w); setShowModal(true); }} className="btn-ghost btn-sm" title="Edit">
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

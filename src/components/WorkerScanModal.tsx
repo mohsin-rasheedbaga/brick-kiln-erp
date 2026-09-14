@@ -278,23 +278,30 @@ export function QuickProductionEntry({
     (wt) => !wt.department_id || wt.department_id === worker.department_id
   );
 
-  // If work type selected, auto-fill rate from department rates
+  // If work type selected, auto-fill rate — priority: worker's personal rate > department rate
+  // The worker's personal rate (set on their profile/card) takes precedence.
+  // Department rate is only used as a fallback if worker has no personal rate.
   useEffect(() => {
     if (form.workTypeId) {
-      // Try to fetch department rate
       (async () => {
         try {
+          // If worker already has a personal rate, use it — don't override with department rate
+          if (worker.rate_per_1000 > 0) {
+            setForm((f) => ({ ...f, ratePer1000: worker.rate_per_1000 }));
+            return;
+          }
+          // Otherwise, try department rate
           const { departmentRates } = await import('../lib/ipc');
           const result = await departmentRates.getByContext(form.departmentId, form.workTypeId, form.categoryId || undefined);
           if (result.rate_per_1000 > 0) {
             setForm((f) => ({ ...f, ratePer1000: result.rate_per_1000 }));
           }
         } catch (e) {
-          // Fall back to worker's rate
+          // Keep worker's personal rate as-is
         }
       })();
     }
-  }, [form.workTypeId, form.categoryId, form.departmentId]);
+  }, [form.workTypeId, form.categoryId, form.departmentId, worker.rate_per_1000]);
 
   const labourAmount = (Number(form.quantity) / 1000) * Number(form.ratePer1000);
 
