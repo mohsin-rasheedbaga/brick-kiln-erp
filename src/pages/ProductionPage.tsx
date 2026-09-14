@@ -1,15 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { PageHeader } from '../components/Card';
 import { Modal } from '../components/Modal';
 import { Spinner, EmptyState } from '../components/Feedback';
 import { useToastStore } from '../stores/toast';
+import { useAuthStore } from '../stores/auth';
 import { production as prodApi, workers as workerApi, departments as deptApi, workTypes as wtApi, kilns as kilnApi, brickCategories as catApi } from '../lib/ipc';
 import type { ProductionEntry, Worker, Department, WorkType, Kiln, BrickCategory } from '../types';
 import { formatCurrency, formatDate, formatNumber } from '../lib/utils';
 import { Plus, Filter, ScanLine } from 'lucide-react';
 import { WorkerScanModal, QuickProductionEntry } from '../components/WorkerScanModal';
 
-const STAGES = [
+// Map departments to their relevant production stages.
+// A supervisor of a department should only see their own stage.
+const DEPARTMENT_STAGES: Record<string, string[]> = {
+  'dept-raw-brick':      ['raw_brick_making'],
+  'dept-transport':      ['raw_brick_transport'],
+  'dept-kiln-loading':  ['kiln_loading'],
+  'dept-kiln-firing':   ['kiln_loading'],  // firing dept can also do loading
+  'dept-kiln-unloading':['baked_brick_unloading'],
+  'dept-grading':       ['baked_brick_unloading'],
+};
+
+const ALL_STAGES = [
   { value: 'raw_brick_making',       label: 'Raw Brick Making' },
   { value: 'raw_brick_transport',     label: 'Raw Brick Transport' },
   { value: 'kiln_loading',           label: 'Kiln Loading / Placement' },
@@ -17,6 +29,7 @@ const STAGES = [
 ];
 
 export default function ProductionPage() {
+  const { user, hasPermission } = useAuthStore();
   const [items, setItems] = useState<ProductionEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -34,6 +47,28 @@ export default function ProductionPage() {
   const [kilns, setKilns] = useState<Kiln[]>([]);
   const [categories, setCategories] = useState<BrickCategory[]>([]);
   const pushToast = useToastStore((s) => s.push);
+
+  // Determine the user's scope:
+  // - If user has a department_id and is NOT super-admin, they are a department supervisor
+  // - Supervisors: locked to their department, only see their stages, rate is read-only
+  // - Admin/Accountant: see everything, can change rate, can create workers
+  const userDeptId = user?.departmentId || '';
+  const isSupervisor = !!userDeptId && user?.roleId !== 'role-super-admin';
+  const canManageWorkers = hasPermission('workers.create');
+  const canChangeRate = !isSupervisor;  // only admin/accountant can change rate
+
+  // Filter stages based on user's department
+  const availableStages = useMemo(() => {
+    if (!isSupervisor) return ALL_STAGES;
+    const allowedStageValues = DEPARTMENT_STAGES[userDeptId] || [];
+    return ALL_STAGES.filter((s) => allowedStageValues.includes(s.value));
+  }, [isSupervisor, userDeptId]);
+
+  // Filter departments — supervisor only sees their own
+  const availableDepartments = useMemo(() => {
+    if (!isSupervisor) return departments;
+    return departments.filter((d) => d.id === userDeptId);
+  }, [isSupervisor, userDeptId, departments]);
 
   const loadDeps = async () => {
     try {
@@ -79,15 +114,17 @@ export default function ProductionPage() {
     <div>
       <PageHeader
         title="Production"
-        subtitle="Record and track brick production across all stages"
+        subtitle={isSupervisor ? `Your department: ${availableDepartments[0]?.name || '—'}` : "Record and track brick production across all stages"}
         actions={
           <>
             <button className="btn-secondary" onClick={() => setShowScanModal(true)}>
               <ScanLine className="h-4 w-4" /> Scan Worker Card
             </button>
-            <button className="btn-primary" onClick={() => setShowModal(true)}>
-              <Plus className="h-4 w-4" /> New Entry
-            </button>
+            {canManageWorkers && (
+              <button className="btn-primary" onClick={() => setShowModal(true)}>
+                <Plus className="h-4 w-4" /> New Entry
+              </button>
+            )}
           </>
         }
       />
@@ -95,12 +132,12 @@ export default function ProductionPage() {
       <div className="card p-3 mb-4">
         <div className="flex flex-wrap gap-3">
           <select className="input max-w-xs" value={stageFilter} onChange={(e) => { setStageFilter(e.target.value); setPage(0); }}>
-            <option value="">All stages</option>
-            {STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            <option value="">{isSupervisor ? 'My stages' : 'All stages'}</option>
+            {availableStages.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
-          <select className="input max-w-xs" value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setPage(0); }}>
-            <option value="">All departments</option>
-            {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          <select className="input max-w-xs" value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setPage(0); }} disabled={isSupervisor}>
+            <option value="">{isSupervisor ? availableDepartments[0]?.name || 'My dept' : 'All departments'}</option>
+            {!isSupervisor && departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
       </div>
@@ -157,10 +194,13 @@ export default function ProductionPage() {
       {showModal && (
         <ProductionModal
           workers={workers}
-          departments={departments}
+          departments={availableDepartments}
           workTypes={workTypes}
           kilns={kilns}
           categories={categories}
+          lockedDeptId={isSupervisor ? userDeptId : undefined}
+          availableStages={availableStages}
+          canChangeRate={canChangeRate}
           onClose={() => setShowModal(false)}
           onSaved={() => { setShowModal(false); load(); }}
         />
@@ -191,20 +231,23 @@ export default function ProductionPage() {
   );
 }
 
-function ProductionModal({ workers, departments, workTypes, kilns, categories, onClose, onSaved }: {
+function ProductionModal({ workers, departments, workTypes, kilns, categories, lockedDeptId, availableStages, canChangeRate, onClose, onSaved }: {
   workers: Worker[];
   departments: Department[];
   workTypes: WorkType[];
   kilns: Kiln[];
   categories: BrickCategory[];
+  lockedDeptId?: string;
+  availableStages: Array<{ value: string; label: string }>;
+  canChangeRate: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    stage: 'raw_brick_making',
+    stage: lockedDeptId && availableStages.length > 0 ? availableStages[0].value : 'raw_brick_making',
     date: new Date().toISOString().slice(0, 10),
     workerId: '',
-    departmentId: '',
+    departmentId: lockedDeptId || '',
     workTypeId: '',
     kilnId: '',
     quantity: 0,
@@ -216,15 +259,15 @@ function ProductionModal({ workers, departments, workTypes, kilns, categories, o
   const [saving, setSaving] = useState(false);
   const pushToast = useToastStore((s) => s.push);
 
-  // Auto-fill worker's department + rate when worker selected
+  // Auto-fill worker's rate when worker selected (rate is auto, not editable by supervisor)
   const handleWorkerChange = (workerId: string) => {
     const w = workers.find((x) => x.id === workerId);
     if (w) {
       setForm((f) => ({
         ...f,
         workerId,
-        departmentId: f.departmentId || w.department_id,
-        ratePer1000: f.ratePer1000 || w.rate_per_1000 || 0,
+        departmentId: lockedDeptId || f.departmentId || w.department_id,
+        ratePer1000: w.rate_per_1000 || 0,
       }));
     } else {
       setForm((f) => ({ ...f, workerId }));
@@ -285,8 +328,8 @@ function ProductionModal({ workers, departments, workTypes, kilns, categories, o
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="label">Stage *</label>
-          <select className="input" value={form.stage} onChange={(e) => setForm({ ...form, stage: e.target.value })}>
-            {STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          <select className="input" value={form.stage} onChange={(e) => setForm({ ...form, stage: e.target.value })} disabled={lockedDeptId !== undefined}>
+            {availableStages.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         <div>
@@ -302,7 +345,7 @@ function ProductionModal({ workers, departments, workTypes, kilns, categories, o
         </div>
         <div>
           <label className="label">Department *</label>
-          <select className="input" value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value, workTypeId: '' })}>
+          <select className="input" value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value, workTypeId: '' })} disabled={lockedDeptId !== undefined}>
             <option value="">Select...</option>
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
@@ -336,8 +379,9 @@ function ProductionModal({ workers, departments, workTypes, kilns, categories, o
           <input type="number" min={1} step={1} className="input" value={form.quantity || ''} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
         </div>
         <div>
-          <label className="label">Rate per 1000 (Rs.)</label>
-          <input type="number" min={0} step={1} className="input" value={form.ratePer1000 || ''} onChange={(e) => setForm({ ...form, ratePer1000: Number(e.target.value) })} />
+          <label className="label">Rate per 1000 (Rs.) {canChangeRate ? '' : '(auto)'}</label>
+          <input type="number" min={0} step={1} className="input" value={form.ratePer1000 || ''} onChange={(e) => setForm({ ...form, ratePer1000: Number(e.target.value) })} readOnly={!canChangeRate} disabled={!canChangeRate} />
+          {!canChangeRate && <p className="text-xs text-slate-400 mt-1">Rate is auto-filled from worker profile. Only admin can change.</p>}
         </div>
         <div className="sm:col-span-2 p-3 bg-emerald-50 border border-emerald-200 rounded-md">
           <div className="text-xs text-emerald-700 uppercase tracking-wider">Computed Labour Amount</div>

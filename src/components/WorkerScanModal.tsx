@@ -247,8 +247,20 @@ export function QuickProductionEntry({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  // Determine the stage based on worker's department
+  const workerDeptId = worker.department_id;
+  const DEPT_STAGE_MAP: Record<string, string> = {
+    'dept-raw-brick': 'raw_brick_making',
+    'dept-transport': 'raw_brick_transport',
+    'dept-kiln-loading': 'kiln_loading',
+    'dept-kiln-firing': 'kiln_loading',
+    'dept-kiln-unloading': 'baked_brick_unloading',
+    'dept-grading': 'baked_brick_unloading',
+  };
+  const autoStage = DEPT_STAGE_MAP[workerDeptId] || 'raw_brick_making';
+
   const [form, setForm] = useState({
-    stage: 'raw_brick_making',
+    stage: autoStage,
     date: new Date().toISOString().slice(0, 10),
     workTypeId: worker.work_type_id || '',
     departmentId: worker.department_id,
@@ -352,12 +364,13 @@ export function QuickProductionEntry({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="label">Stage</label>
+            <label className="label">Stage (auto from department)</label>
             <select
               className="input"
               value={form.stage}
               onChange={(e) => setForm({ ...form, stage: e.target.value })}
             >
+              {/* Show all stages but pre-select based on worker's department */}
               <option value="raw_brick_making">Raw Brick Making</option>
               <option value="raw_brick_transport">Raw Brick Transport</option>
               <option value="kiln_loading">Kiln Loading</option>
@@ -405,15 +418,16 @@ export function QuickProductionEntry({
             />
           </div>
           <div>
-            <label className="label">Rate per 1000</label>
+            <label className="label">Rate per 1000 (auto)</label>
             <input
               type="number"
               min={0}
               step={0.01}
-              className="input"
+              className="input bg-slate-100"
               value={form.ratePer1000 || ''}
-              onChange={(e) => setForm({ ...form, ratePer1000: Number(e.target.value) })}
+              readOnly
             />
+            <p className="text-xs text-slate-400 mt-1">Auto-filled from worker profile. Rate is fixed.</p>
           </div>
         </div>
 
