@@ -61,14 +61,14 @@ export default function SalesPage() {
         }
       />
 
-      {/* Baked Brick Stock Panel */}
+      {/* POS Stock Panel — click any category to start a quick sale */}
       <div className="card p-4 mb-4 bg-emerald-50 border-emerald-200">
         <div className="flex items-center gap-3 mb-3">
           <Boxes className="h-5 w-5 text-emerald-700" />
           <div className="flex-1">
-            <h2 className="text-base font-semibold text-emerald-900">Baked Brick Stock on Hand</h2>
+            <h2 className="text-base font-semibold text-emerald-900">POS — Baked Brick Stock</h2>
             <p className="text-xs text-emerald-700">
-              {formatNumber(totalStock)} bricks · Est. value: {formatCurrency(totalStockValue)}
+              {formatNumber(totalStock)} bricks · Est. value: {formatCurrency(totalStockValue)} · Click a category to sell
             </p>
           </div>
         </div>
@@ -77,13 +77,19 @@ export default function SalesPage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {stockBalance.map((s) => (
-              <div key={s.category_id} className={`p-3 rounded-md border ${s.quantity > 0 ? 'bg-white border-emerald-200' : 'bg-slate-100 border-slate-200 opacity-60'}`}>
+              <button
+                key={s.category_id}
+                onClick={() => setShowModal(true)}
+                disabled={s.quantity <= 0}
+                className={`p-3 rounded-md border text-left transition ${s.quantity > 0 ? 'bg-white border-emerald-200 hover:border-brand-400 hover:shadow-md cursor-pointer' : 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed'}`}
+                title={s.quantity > 0 ? `Click to sell ${s.category_name}` : 'Out of stock'}
+              >
                 <div className="text-xs text-slate-500 uppercase tracking-wider">{s.category_name}</div>
                 <div className={`text-lg font-bold ${s.quantity > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>
                   {formatNumber(s.quantity)}
                 </div>
                 <div className="text-[10px] text-slate-400">@ {formatCurrency(s.default_selling_rate)}</div>
-              </div>
+              </button>
             ))}
           </div>
         )}

@@ -578,3 +578,9 @@ export const withdraw = {
     week_end: string;
   }>('workers:weekly-summary', { workerId }),
 };
+
+// =================== Phase v2.2.0 APIs (Production Cost Report) ===================
+
+export const productionCostReport = {
+  get: (from: string, to: string) => call<any>('reports:production-cost', { from, to }),
+};

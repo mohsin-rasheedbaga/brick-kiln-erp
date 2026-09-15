@@ -38,12 +38,15 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/expenses',          label: 'Expenses',         icon: Wallet,          permission: 'expenses.view', group: 'Accounts' },
   { to: '/worker-payments',   label: 'Worker Pay',        icon: Users,           permission: 'worker_payments.view', group: 'Accounts' },
   { to: '/payroll',           label: 'Payroll Runs',      icon: Calculator,       permission: 'worker_payments.view', group: 'Accounts' },
-  { to: '/investors',         label: 'Investors',          icon: TrendingUp,       permission: 'accounts.view', group: 'Accounts' },
   { to: '/cash',              label: 'Cash Register',     icon: Wallet,          permission: 'accounts.view', group: 'Accounts' },
   { to: '/stock',             label: 'Stock',            icon: PackageIcon,     permission: 'stock.view', group: 'Accounts' },
 
+  // Administration (super-admin only for investors)
+  { to: '/investors',         label: 'Investors',          icon: TrendingUp,       permission: 'system.audit', group: 'Administration' },
+
   // Reports
   { to: '/reports',           label: 'Reports',          icon: BarChart3,        permission: 'reports.view', group: 'Reports' },
+  { to: '/production-cost-report', label: 'Cost & Profit',  icon: Calculator,        permission: 'reports.view', group: 'Reports' },
 
   // Administration
   { to: '/departments',       label: 'Departments',      icon: Building2,       permission: 'departments.manage', group: 'Administration' },

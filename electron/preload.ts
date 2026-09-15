@@ -91,6 +91,8 @@ const ALLOWED_CHANNELS = new Set<string>([
   'investors:monthly-profit',
   // withdraw earnings (Phase v2.1.0)
   'workers:withdraw-earnings', 'workers:weekly-summary',
+  // production cost report (Phase v2.2.0)
+  'reports:production-cost',
 ]);
 
 contextBridge.exposeInMainWorld('erp', {

@@ -31,6 +31,7 @@ import DailySummaryPage from './pages/DailySummaryPage';
 import PayrollPage from './pages/PayrollPage';
 import CloudSyncPage from './pages/CloudSyncPage';
 import InvestorsPage from './pages/InvestorsPage';
+import ProductionCostReportPage from './pages/ProductionCostReportPage';
 import { ToastContainer } from './components/Toast';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -97,11 +98,12 @@ export default function App() {
           <Route path="cash" element={<RequirePermission code="accounts.view"><CashPage /></RequirePermission>} />
           <Route path="stock" element={<RequirePermission code="stock.view"><StockPage /></RequirePermission>} />
           <Route path="reports" element={<RequirePermission code="reports.view"><ReportsPage /></RequirePermission>} />
+          <Route path="production-cost-report" element={<RequirePermission code="reports.view"><ProductionCostReportPage /></RequirePermission>} />
           <Route path="daily-summary" element={<RequirePermission code="dashboard.view"><DailySummaryPage /></RequirePermission>} />
           <Route path="rates" element={<RequirePermission code="settings.manage"><RatesPage /></RequirePermission>} />
           <Route path="payroll" element={<RequirePermission code="worker_payments.view"><PayrollPage /></RequirePermission>} />
           <Route path="cloud-sync" element={<RequirePermission code="settings.manage"><CloudSyncPage /></RequirePermission>} />
-          <Route path="investors" element={<RequirePermission code="accounts.view"><InvestorsPage /></RequirePermission>} />
+          <Route path="investors" element={<RequirePermission code="system.audit"><InvestorsPage /></RequirePermission>} />
           <Route path="users" element={<RequirePermission code="users.manage"><UsersPage /></RequirePermission>} />
           <Route path="roles" element={<RequirePermission code="roles.manage"><RolesPage /></RequirePermission>} />
           <Route path="settings" element={<RequirePermission code="settings.manage"><SettingsPage /></RequirePermission>} />
