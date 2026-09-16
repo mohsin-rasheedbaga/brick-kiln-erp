@@ -7,7 +7,7 @@ import { BarChart, DonutChart, KpiCard } from '../components/Charts';
 import { Link } from 'react-router-dom';
 import {
   Users, Building2, Package, Wallet, TrendingUp, TrendingDown,
-  Boxes, Flame, AlertCircle, ArrowDownToLine, ArrowUpFromLine,
+  Boxes, Flame, AlertCircle, ArrowDownToLine, ArrowUpFromLine, BarChart3,
 } from 'lucide-react';
 import { formatCurrency, formatNumber, formatDate } from '../lib/utils';
 
@@ -62,6 +62,99 @@ export default function DashboardPage() {
           Welcome, <span className="font-medium text-slate-700">{user?.fullName}</span>. Today is {formatDate(stats.today.date)}.
         </p>
       </div>
+
+      {/* Super-Admin Comprehensive Report Card */}
+      {user?.roleId === 'role-super-admin' && (
+        <div className="card overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-5 py-4">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" /> Complete Business Overview
+            </h2>
+            <p className="text-xs text-slate-300 mt-1">Real-time snapshot of entire kiln operation</p>
+          </div>
+          <div className="p-5">
+            {/* Top row: 4 main KPIs */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-md">
+                <div className="text-xs text-emerald-700 uppercase tracking-wider font-medium">Cash Balance</div>
+                <div className="text-2xl font-bold text-emerald-700 mt-1">{formatCurrency(stats.cash_balance)}</div>
+                <div className="text-[10px] text-emerald-600 mt-0.5">Total cash in hand</div>
+              </div>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="text-xs text-blue-700 uppercase tracking-wider font-medium">Today's Production</div>
+                <div className="text-2xl font-bold text-blue-700 mt-1">{formatNumber(stats.today.total_production_qty)}</div>
+                <div className="text-[10px] text-blue-600 mt-0.5">bricks made today</div>
+              </div>
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <div className="text-xs text-amber-700 uppercase tracking-wider font-medium">Today's Sales</div>
+                <div className="text-2xl font-bold text-amber-700 mt-1">{formatCurrency(stats.today.sales_total)}</div>
+                <div className="text-[10px] text-amber-600 mt-0.5">{stats.today.sales_count} invoices</div>
+              </div>
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                <div className="text-xs text-red-700 uppercase tracking-wider font-medium">Today's Expenses</div>
+                <div className="text-2xl font-bold text-red-700 mt-1">{formatCurrency(stats.today.expenses_total)}</div>
+                <div className="text-[10px] text-red-600 mt-0.5">{stats.today.expenses_count} expenses</div>
+              </div>
+            </div>
+
+            {/* Production breakdown by stage */}
+            <div className="mb-4">
+              <div className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Today's Production by Stage</div>
+              <div className="grid grid-cols-4 gap-2">
+                {stats.today.production_by_stage.length > 0 ? stats.today.production_by_stage.map((p) => (
+                  <div key={p.stage} className="p-2 bg-slate-50 border border-slate-200 rounded text-center">
+                    <div className="text-[10px] text-slate-500 uppercase">{p.stage.replace(/_/g, ' ')}</div>
+                    <div className="text-lg font-bold text-slate-900">{formatNumber(p.total_qty)}</div>
+                    <div className="text-[10px] text-emerald-600">{formatCurrency(p.total_labour)}</div>
+                  </div>
+                )) : (
+                  <div className="col-span-4 text-sm text-slate-400 text-center py-2">No production today</div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom row: receivables, payables, stock, batches */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-2 border border-slate-200 rounded text-center">
+                <div className="text-[10px] text-slate-500 uppercase">Customer Receivables</div>
+                <div className="text-base font-bold text-amber-700">{formatCurrency(stats.customer_receivables)}</div>
+                <div className="text-[10px] text-slate-400">{stats.open_invoices_count} open invoices</div>
+              </div>
+              <div className="p-2 border border-slate-200 rounded text-center">
+                <div className="text-[10px] text-slate-500 uppercase">Worker Payable</div>
+                <div className="text-base font-bold text-purple-700">{formatCurrency(stats.worker_payable)}</div>
+                <div className="text-[10px] text-slate-400">{stats.active_workers} active workers</div>
+              </div>
+              <div className="p-2 border border-slate-200 rounded text-center">
+                <div className="text-[10px] text-slate-500 uppercase">Bricks in Stock</div>
+                <div className="text-base font-bold text-emerald-700">
+                  {formatNumber(stats.stock_by_category.reduce((s, c) => s + c.quantity, 0))}
+                </div>
+                <div className="text-[10px] text-slate-400">{stats.stock_by_category.length} grades</div>
+              </div>
+              <div className="p-2 border border-slate-200 rounded text-center">
+                <div className="text-[10px] text-slate-500 uppercase">Active Batches</div>
+                <div className="text-base font-bold text-orange-700">{stats.active_batches}</div>
+                <div className="text-[10px] text-slate-400">{stats.firing_batches} firing</div>
+              </div>
+            </div>
+
+            {/* Stock by grade mini display */}
+            {stats.stock_by_category.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <div className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Stock by Grade</div>
+                <div className="flex flex-wrap gap-2">
+                  {stats.stock_by_category.map((s) => (
+                    <span key={s.category_id} className={`badge ${s.quantity > 0 ? 'badge-success' : 'badge-default'}`}>
+                      {s.category_name}: {formatNumber(s.quantity)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Cash Balance — prominent for accountant */}
       {canSeeAccounts && (

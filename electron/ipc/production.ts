@@ -270,9 +270,43 @@ export function registerProductionHandlers(): void {
         if (args.batchId) recomputeBatchTotals(db, args.batchId);
 
         // Update stock on baked_brick_unloading
+        // When bricks come out of the kiln, they're graded into categories:
+        // A Grade (~50%), B Grade (~25%), C Grade (~15%), Broken (~8%), Reject (~2%)
+        // If the user provides a specific categoryId, only that category gets the quantity.
+        // If no categoryId, auto-distribute across all active categories.
         if (args.stage === 'baked_brick_unloading') {
-          const categoryId = args.categoryId || 'cat-a';
-          adjustStock(db, categoryId, args.quantity, 'production_in', id, args.batchId ?? null, args.notes ?? null, session.userId);
+          if (args.categoryId) {
+            // User specified a specific grade — add all to that category
+            adjustStock(db, args.categoryId, args.quantity, 'production_in', id, args.batchId ?? null, args.notes ?? null, session.userId);
+          } else {
+            // Auto-distribute across all active brick categories
+            const cats = all<{ id: string; name: string; sort_order: number }>(
+              db,
+              'SELECT id, name, sort_order FROM brick_categories WHERE is_active = 1 ORDER BY sort_order ASC'
+            );
+            if (cats.length > 0) {
+              // Default distribution percentages (can be adjusted later via settings)
+              // First 5 categories get: 50%, 25%, 15%, 8%, 2%
+              // If fewer categories, distribute evenly
+              const defaultPcts = [0.50, 0.25, 0.15, 0.08, 0.02];
+              let distributed = 0;
+              cats.forEach((cat, idx) => {
+                let qty: number;
+                if (idx < cats.length - 1) {
+                  const pct = idx < defaultPcts.length ? defaultPcts[idx] : 0;
+                  qty = Math.floor(args.quantity * pct);
+                  distributed += qty;
+                } else {
+                  // Last category gets the remainder (to avoid rounding loss)
+                  qty = args.quantity - distributed;
+                }
+                if (qty > 0) {
+                  adjustStock(db, cat.id, qty, 'production_in', id, args.batchId ?? null,
+                    `${args.notes ? args.notes + ' | ' : ''}Auto-graded: ${cat.name}`, session.userId);
+                }
+              });
+            }
+          }
         }
 
         audit({
