@@ -19,7 +19,6 @@ import UpdatesPage from './pages/UpdatesPage';
 import BatchesPage from './pages/BatchesPage';
 import CustomersPage from './pages/CustomersPage';
 import CustomerDetailPage from './pages/CustomerDetailPage';
-import SalesPage from './pages/SalesPage';
 import ExpensesPage from './pages/ExpensesPage';
 import WorkerPaymentsPage from './pages/WorkerPaymentsPage';
 import CashPage from './pages/CashPage';
@@ -33,6 +32,7 @@ import CloudSyncPage from './pages/CloudSyncPage';
 import InvestorsPage from './pages/InvestorsPage';
 import ProductionCostReportPage from './pages/ProductionCostReportPage';
 import POSSalesPage from './pages/POSSalesPage';
+import ProductsPage from './pages/ProductsPage';
 import { ToastContainer } from './components/Toast';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -93,8 +93,8 @@ export default function App() {
           <Route path="batches" element={<RequirePermission code="batches.view"><BatchesPage /></RequirePermission>} />
           <Route path="customers" element={<RequirePermission code="customers.view"><CustomersPage /></RequirePermission>} />
           <Route path="customers/:id" element={<RequirePermission code="customers.view"><CustomerDetailPage /></RequirePermission>} />
-          <Route path="sales" element={<RequirePermission code="sales.view"><SalesPage /></RequirePermission>} />
           <Route path="pos" element={<RequirePermission code="sales.create"><POSSalesPage /></RequirePermission>} />
+          <Route path="products" element={<RequirePermission code="stock.view"><ProductsPage /></RequirePermission>} />
           <Route path="expenses" element={<RequirePermission code="expenses.view"><ExpensesPage /></RequirePermission>} />
           <Route path="worker-payments" element={<RequirePermission code="worker_payments.view"><WorkerPaymentsPage /></RequirePermission>} />
           <Route path="cash" element={<RequirePermission code="accounts.view"><CashPage /></RequirePermission>} />

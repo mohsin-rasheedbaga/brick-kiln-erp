@@ -27,7 +27,7 @@ export default function DashboardPage() {
 
   // Determine what sections to show based on permissions
   const canSeeAccounts = hasPermission('accounts.view') || hasPermission('expenses.view') || hasPermission('worker_payments.view');
-  const canSeeSales = hasPermission('sales.view') || hasPermission('customers.view');
+  const canSeeSales = hasPermission('sales.create') || hasPermission('customers.view');
   const canSeeProduction = hasPermission('production.view') || hasPermission('dashboard.view');
 
   useEffect(() => {
@@ -193,7 +193,7 @@ export default function DashboardPage() {
           <MiniStatCard label="Active Batches" value={stats.active_batches} icon={Package} to="/batches" subtitle={`${stats.firing_batches} firing`} />
         )}
         {canSeeSales && (
-          <MiniStatCard label="Open Invoices" value={stats.open_invoices_count} icon={AlertCircle} to="/sales" />
+          <MiniStatCard label="Open Invoices" value={stats.open_invoices_count} icon={AlertCircle} to="/pos" />
         )}
       </div>
 
@@ -244,7 +244,7 @@ export default function DashboardPage() {
       <div className="card p-5">
         <h2 className="text-base font-semibold text-slate-900 mb-3">Quick Actions</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {canSeeSales && <QuickAction to="/sales" icon={TrendingUp} label="New Sale" />}
+          {canSeeSales && <QuickAction to="/pos" icon={TrendingUp} label="New Sale" />}
           {canSeeProduction && <QuickAction to="/production" icon={Package} label="Record Production" />}
           {canSeeAccounts && <QuickAction to="/expenses" icon={TrendingDown} label="New Expense" />}
           {canSeeAccounts && <QuickAction to="/cash" icon={Wallet} label="Cash Register" />}
