@@ -261,6 +261,22 @@ function runMigrations(): void {
     log.warn('[db-init] Migration v1.9.5 (accountant permissions) error:', err);
   }
 
+  // Migration v2.3.0: add min_selling_rate + max_selling_rate to brick_categories
+  try {
+    const cols = all<{ name: string }>(db, "PRAGMA table_info(brick_categories)");
+    const colNames = new Set(cols.map((c) => c.name));
+    if (!colNames.has('min_selling_rate')) {
+      log.info('[db-init] Migration v2.3.0: adding brick_categories.min_selling_rate column');
+      db.exec('ALTER TABLE brick_categories ADD COLUMN min_selling_rate REAL NOT NULL DEFAULT 0');
+    }
+    if (!colNames.has('max_selling_rate')) {
+      log.info('[db-init] Migration v2.3.0: adding brick_categories.max_selling_rate column');
+      db.exec('ALTER TABLE brick_categories ADD COLUMN max_selling_rate REAL NOT NULL DEFAULT 0');
+    }
+  } catch (err) {
+    log.warn('[db-init] Migration v2.3.0 (brick_categories columns) error:', err);
+  }
+
   // Ensure schema_version is set to the latest
   run(db, "INSERT INTO app_meta (key, value, updated_at) VALUES ('schema_version', ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')", SCHEMA_VERSION);
 }

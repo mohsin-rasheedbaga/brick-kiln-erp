@@ -141,9 +141,9 @@ export const workTypes = {
 export const brickCategories = {
   list: (includeInactive = false, includeStock = false) =>
     call<BrickCategory[]>('brick-categories:list', { includeInactive, includeStock }),
-  create: (data: { name: string; code: string; description?: string; defaultSellingRate?: number; sortOrder?: number }) =>
+  create: (data: { name: string; code: string; description?: string; defaultSellingRate?: number; minSellingRate?: number; maxSellingRate?: number; sortOrder?: number }) =>
     call<BrickCategory>('brick-categories:create', data),
-  update: (id: string, changes: Partial<BrickCategory>) =>
+  update: (id: string, changes: Partial<BrickCategory> & { minSellingRate?: number; maxSellingRate?: number }) =>
     call<BrickCategory>('brick-categories:update', { id, ...changes }),
   setActive: (id: string, active: boolean) =>
     call<{ success: true }>('brick-categories:set-active', { id, active }),

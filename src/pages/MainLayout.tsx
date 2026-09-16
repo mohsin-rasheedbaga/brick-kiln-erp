@@ -31,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/rates',             label: 'Labour Rates',     icon: Tags,             permission: 'settings.manage', group: 'Operations' },
 
   // Sales & Customers
+  { to: '/pos',               label: 'POS Sales',            icon: ShoppingCart,    permission: 'sales.create', group: 'Sales & Finance' },
   { to: '/sales',             label: 'Sales',            icon: ShoppingCart,    permission: 'sales.view', group: 'Sales & Finance' },
   { to: '/customers',         label: 'Customers',         icon: Users2,          permission: 'customers.view', group: 'Sales & Finance' },
 

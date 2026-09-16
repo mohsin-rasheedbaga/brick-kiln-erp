@@ -20,9 +20,11 @@ export interface BrickCategory {
   code: string;
   description: string | null;
   default_selling_rate: number;
+  min_selling_rate: number;
+  max_selling_rate: number;
   is_active: boolean;
   sort_order: number;
-  current_stock?: number;          // optional: from stock table
+  current_stock?: number;
 }
 
 function rowToCat(row: any): BrickCategory {
@@ -32,6 +34,8 @@ function rowToCat(row: any): BrickCategory {
     code: row.code,
     description: row.description,
     default_selling_rate: row.default_selling_rate,
+    min_selling_rate: row.min_selling_rate ?? 0,
+    max_selling_rate: row.max_selling_rate ?? 0,
     is_active: !!row.is_active,
     sort_order: row.sort_order,
     current_stock: row.current_stock,
@@ -54,7 +58,7 @@ export function registerBrickCategoryHandlers(): void {
 
   ipcMain.handle('brick-categories:create', async (_evt, args: {
     token: string; name: string; code: string; description?: string;
-    defaultSellingRate?: number; sortOrder?: number;
+    defaultSellingRate?: number; minSellingRate?: number; maxSellingRate?: number; sortOrder?: number;
   }): Promise<IpcResult<BrickCategory>> => {
     return wrap(async () => {
       const session = getSession(args.token);
@@ -68,6 +72,8 @@ export function registerBrickCategoryHandlers(): void {
       if (!code) throw new Error('Category code is required.');
       const rate = Number(args.defaultSellingRate ?? 0);
       if (isNaN(rate) || rate < 0) throw new Error('Default selling rate must be a non-negative number.');
+      const minRate = Number(args.minSellingRate ?? 0);
+      const maxRate = Number(args.maxSellingRate ?? 0);
 
       const db = getDb();
       const dup = get<{ id: string }>(db, 'SELECT id FROM brick_categories WHERE name = ? OR code = ?', name, code);
@@ -75,8 +81,8 @@ export function registerBrickCategoryHandlers(): void {
 
       const id = `cat-${uuidv4()}`;
       transaction(db, () => {
-        run(db, `INSERT INTO brick_categories (id, name, code, description, default_selling_rate, is_active, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, ?, datetime('now'), datetime('now'))`,
-          id, name, code, args.description ?? null, rate, args.sortOrder ?? 100);
+        run(db, `INSERT INTO brick_categories (id, name, code, description, default_selling_rate, min_selling_rate, max_selling_rate, is_active, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now'), datetime('now'))`,
+          id, name, code, args.description ?? null, rate, minRate, maxRate, args.sortOrder ?? 100);
         audit({ userId: session.userId, username: session.username, action: 'create', module: 'brick_categories', entityId: id, entityType: 'brick_category', description: `Created brick category ${name}` });
       });
       const row = get<any>(db, 'SELECT * FROM brick_categories WHERE id = ?', id);
@@ -86,7 +92,7 @@ export function registerBrickCategoryHandlers(): void {
 
   ipcMain.handle('brick-categories:update', async (_evt, args: {
     token: string; id: string; name?: string; code?: string; description?: string;
-    defaultSellingRate?: number; sortOrder?: number;
+    defaultSellingRate?: number; minSellingRate?: number; maxSellingRate?: number; sortOrder?: number;
   }): Promise<IpcResult<BrickCategory>> => {
     return wrap(async () => {
       const session = getSession(args.token);
@@ -107,6 +113,16 @@ export function registerBrickCategoryHandlers(): void {
         const v = Number(args.defaultSellingRate);
         if (isNaN(v) || v < 0) throw new Error('Selling rate must be a non-negative number.');
         updates.push('default_selling_rate = ?'); params.push(v);
+      }
+      if (args.minSellingRate !== undefined) {
+        const v = Number(args.minSellingRate);
+        if (isNaN(v) || v < 0) throw new Error('Min selling rate must be non-negative.');
+        updates.push('min_selling_rate = ?'); params.push(v);
+      }
+      if (args.maxSellingRate !== undefined) {
+        const v = Number(args.maxSellingRate);
+        if (isNaN(v) || v < 0) throw new Error('Max selling rate must be non-negative.');
+        updates.push('max_selling_rate = ?'); params.push(v);
       }
       if (args.sortOrder !== undefined) { updates.push('sort_order = ?'); params.push(args.sortOrder); }
       if (updates.length === 0) throw new Error('No fields to update.');

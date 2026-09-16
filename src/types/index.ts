@@ -100,6 +100,8 @@ export interface BrickCategory {
   code: string;
   description: string | null;
   default_selling_rate: number;
+  min_selling_rate: number;
+  max_selling_rate: number;
   is_active: boolean;
   sort_order: number;
   current_stock?: number;

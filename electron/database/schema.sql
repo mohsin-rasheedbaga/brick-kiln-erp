@@ -254,6 +254,8 @@ CREATE TABLE IF NOT EXISTS brick_categories (
   code            TEXT NOT NULL UNIQUE,
   description     TEXT,
   default_selling_rate REAL NOT NULL DEFAULT 0,
+  min_selling_rate REAL NOT NULL DEFAULT 0,   -- minimum rate allowed in POS (e.g. 500)
+  max_selling_rate REAL NOT NULL DEFAULT 0,   -- maximum rate allowed in POS (e.g. 570)
   is_active       INTEGER NOT NULL DEFAULT 1,
   sort_order      INTEGER NOT NULL DEFAULT 0,
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
