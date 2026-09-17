@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import {
   Users, Building2, Package, Wallet, TrendingUp, TrendingDown,
   Boxes, Flame, AlertCircle, ArrowDownToLine, ArrowUpFromLine, BarChart3,
+  Truck, Hammer, ShoppingCart, ChevronRight,
 } from 'lucide-react';
 import { formatCurrency, formatNumber, formatDate } from '../lib/utils';
 
@@ -63,93 +64,117 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Super-Admin Comprehensive Report Card */}
+      {/* Super-Admin Visual Production Flow */}
       {user?.roleId === 'role-super-admin' && (
         <div className="card overflow-hidden">
           <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-5 py-4">
             <h2 className="text-lg font-bold flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" /> Complete Business Overview
+              <BarChart3 className="h-5 w-5" /> Today's Production Flow
             </h2>
-            <p className="text-xs text-slate-300 mt-1">Real-time snapshot of entire kiln operation</p>
+            <p className="text-xs text-slate-300 mt-1">Live brick lifecycle — from raw clay to sale</p>
           </div>
+
           <div className="p-5">
-            {/* Top row: 4 main KPIs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-md">
-                <div className="text-xs text-emerald-700 uppercase tracking-wider font-medium">Cash Balance</div>
-                <div className="text-2xl font-bold text-emerald-700 mt-1">{formatCurrency(stats.cash_balance)}</div>
-                <div className="text-[10px] text-emerald-600 mt-0.5">Total cash in hand</div>
+            {/* Visual Flow: Stage 1 -> 2 -> 3 -> 4 -> 5 */}
+            <div className="flex flex-col lg:flex-row items-stretch gap-3">
+
+              {/* Stage 1: Raw Brick Making */}
+              <FlowStageCard
+                icon={Hammer}
+                iconColor="bg-amber-100 text-amber-700"
+                title="Raw Bricks Made"
+                subtitle="نئی کچی اینٹ"
+                quantity={stats.today.production_by_stage.find(p => p.stage === 'raw_brick_making')?.total_qty || 0}
+                cost={stats.today.production_by_stage.find(p => p.stage === 'raw_brick_making')?.total_labour || 0}
+                costLabel="Labour"
+              />
+
+              {/* Arrow */}
+              <FlowArrow />
+
+              {/* Stage 2: Transport to Kiln */}
+              <FlowStageCard
+                icon={Truck}
+                iconColor="bg-blue-100 text-blue-700"
+                title="Transported to Kiln"
+                subtitle="بھٹے تک پہنچی"
+                quantity={stats.today.production_by_stage.find(p => p.stage === 'raw_brick_transport')?.total_qty || 0}
+                cost={stats.today.production_by_stage.find(p => p.stage === 'raw_brick_transport')?.total_labour || 0}
+                costLabel="Transport"
+              />
+
+              {/* Arrow */}
+              <FlowArrow />
+
+              {/* Stage 3: Kiln Loading */}
+              <FlowStageCard
+                icon={Package}
+                iconColor="bg-purple-100 text-purple-700"
+                title="Loaded into Kiln"
+                subtitle="بھٹے میں لوڈ ہوئی"
+                quantity={stats.today.production_by_stage.find(p => p.stage === 'kiln_loading')?.total_qty || 0}
+                cost={stats.today.production_by_stage.find(p => p.stage === 'kiln_loading')?.total_labour || 0}
+                costLabel="Loading"
+              />
+
+              {/* Arrow */}
+              <FlowArrow />
+
+              {/* Stage 4: Baked Bricks Out */}
+              <FlowStageCard
+                icon={Flame}
+                iconColor="bg-orange-100 text-orange-700"
+                title="Baked Bricks Out"
+                subtitle="پکی اینٹ نکلی"
+                quantity={stats.today.production_by_stage.find(p => p.stage === 'baked_brick_unloading')?.total_qty || 0}
+                cost={stats.today.production_by_stage.find(p => p.stage === 'baked_brick_unloading')?.total_labour || 0}
+                costLabel="Unloading"
+              />
+
+              {/* Arrow */}
+              <FlowArrow />
+
+              {/* Stage 5: Sold */}
+              <FlowStageCard
+                icon={ShoppingCart}
+                iconColor="bg-emerald-100 text-emerald-700"
+                title="Sold Today"
+                subtitle="فروخت ہوئی"
+                quantity={0}
+                cost={stats.today.sales_total}
+                costLabel="Revenue"
+                isRevenue
+              />
+            </div>
+
+            {/* Summary row */}
+            <div className="mt-5 pt-4 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-md text-center">
+                <div className="text-xs text-emerald-700 uppercase font-medium">Cash Balance</div>
+                <div className="text-xl font-bold text-emerald-700">{formatCurrency(stats.cash_balance)}</div>
               </div>
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <div className="text-xs text-blue-700 uppercase tracking-wider font-medium">Today's Production</div>
-                <div className="text-2xl font-bold text-blue-700 mt-1">{formatNumber(stats.today.total_production_qty)}</div>
-                <div className="text-[10px] text-blue-600 mt-0.5">bricks made today</div>
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-center">
+                <div className="text-xs text-amber-700 uppercase font-medium">Receivables</div>
+                <div className="text-xl font-bold text-amber-700">{formatCurrency(stats.customer_receivables)}</div>
               </div>
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
-                <div className="text-xs text-amber-700 uppercase tracking-wider font-medium">Today's Sales</div>
-                <div className="text-2xl font-bold text-amber-700 mt-1">{formatCurrency(stats.today.sales_total)}</div>
-                <div className="text-[10px] text-amber-600 mt-0.5">{stats.today.sales_count} invoices</div>
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded-md text-center">
+                <div className="text-xs text-purple-700 uppercase font-medium">Worker Payable</div>
+                <div className="text-xl font-bold text-purple-700">{formatCurrency(stats.worker_payable)}</div>
               </div>
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                <div className="text-xs text-red-700 uppercase tracking-wider font-medium">Today's Expenses</div>
-                <div className="text-2xl font-bold text-red-700 mt-1">{formatCurrency(stats.today.expenses_total)}</div>
-                <div className="text-[10px] text-red-600 mt-0.5">{stats.today.expenses_count} expenses</div>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-center">
+                <div className="text-xs text-slate-600 uppercase font-medium">Bricks in Stock</div>
+                <div className="text-xl font-bold text-slate-700">{formatNumber(stats.stock_by_category.reduce((s, c) => s + c.quantity, 0))}</div>
               </div>
             </div>
 
-            {/* Production breakdown by stage */}
-            <div className="mb-4">
-              <div className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Today's Production by Stage</div>
-              <div className="grid grid-cols-4 gap-2">
-                {stats.today.production_by_stage.length > 0 ? stats.today.production_by_stage.map((p) => (
-                  <div key={p.stage} className="p-2 bg-slate-50 border border-slate-200 rounded text-center">
-                    <div className="text-[10px] text-slate-500 uppercase">{p.stage.replace(/_/g, ' ')}</div>
-                    <div className="text-lg font-bold text-slate-900">{formatNumber(p.total_qty)}</div>
-                    <div className="text-[10px] text-emerald-600">{formatCurrency(p.total_labour)}</div>
-                  </div>
-                )) : (
-                  <div className="col-span-4 text-sm text-slate-400 text-center py-2">No production today</div>
-                )}
-              </div>
-            </div>
-
-            {/* Bottom row: receivables, payables, stock, batches */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-2 border border-slate-200 rounded text-center">
-                <div className="text-[10px] text-slate-500 uppercase">Customer Receivables</div>
-                <div className="text-base font-bold text-amber-700">{formatCurrency(stats.customer_receivables)}</div>
-                <div className="text-[10px] text-slate-400">{stats.open_invoices_count} open invoices</div>
-              </div>
-              <div className="p-2 border border-slate-200 rounded text-center">
-                <div className="text-[10px] text-slate-500 uppercase">Worker Payable</div>
-                <div className="text-base font-bold text-purple-700">{formatCurrency(stats.worker_payable)}</div>
-                <div className="text-[10px] text-slate-400">{stats.active_workers} active workers</div>
-              </div>
-              <div className="p-2 border border-slate-200 rounded text-center">
-                <div className="text-[10px] text-slate-500 uppercase">Bricks in Stock</div>
-                <div className="text-base font-bold text-emerald-700">
-                  {formatNumber(stats.stock_by_category.reduce((s, c) => s + c.quantity, 0))}
-                </div>
-                <div className="text-[10px] text-slate-400">{stats.stock_by_category.length} grades</div>
-              </div>
-              <div className="p-2 border border-slate-200 rounded text-center">
-                <div className="text-[10px] text-slate-500 uppercase">Active Batches</div>
-                <div className="text-base font-bold text-orange-700">{stats.active_batches}</div>
-                <div className="text-[10px] text-slate-400">{stats.firing_batches} firing</div>
-              </div>
-            </div>
-
-            {/* Stock by grade mini display */}
+            {/* Stock by grade badges */}
             {stats.stock_by_category.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-slate-100">
-                <div className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Stock by Grade</div>
-                <div className="flex flex-wrap gap-2">
-                  {stats.stock_by_category.map((s) => (
-                    <span key={s.category_id} className={`badge ${s.quantity > 0 ? 'badge-success' : 'badge-default'}`}>
-                      {s.category_name}: {formatNumber(s.quantity)}
-                    </span>
-                  ))}
-                </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {stats.stock_by_category.map((s) => (
+                  <span key={s.category_id} className={`badge ${s.quantity > 0 ? 'badge-success' : 'badge-default'}`}>
+                    {s.category_name}: {formatNumber(s.quantity)}
+                  </span>
+                ))}
               </div>
             )}
           </div>
@@ -374,5 +399,57 @@ function QuickAction({ to, icon: Icon, label }: { to: string; icon: React.Elemen
       <Icon className="h-5 w-5 text-slate-600" />
       <span className="text-xs font-medium text-slate-700">{label}</span>
     </Link>
+  );
+}
+
+function FlowStageCard({ icon: Icon, iconColor, title, subtitle, quantity, cost, costLabel, isRevenue }: {
+  icon: React.ElementType;
+  iconColor: string;
+  title: string;
+  subtitle: string;
+  quantity: number;
+  cost: number;
+  costLabel: string;
+  isRevenue?: boolean;
+}) {
+  const hasData = quantity > 0 || cost > 0;
+  return (
+    <div className={`flex-1 min-w-[140px] p-3 rounded-lg border-2 transition ${hasData ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-100 bg-slate-50 opacity-60'}`}>
+      {/* Icon */}
+      <div className="flex justify-center mb-2">
+        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${iconColor}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+      {/* Title */}
+      <div className="text-center">
+        <div className="text-xs font-semibold text-slate-700">{title}</div>
+        <div className="text-[10px] text-slate-400">{subtitle}</div>
+      </div>
+      {/* Quantity */}
+      <div className="text-center mt-2">
+        <div className={`text-2xl font-bold ${hasData ? 'text-slate-900' : 'text-slate-400'}`}>
+          {formatNumber(quantity)}
+        </div>
+        <div className="text-[10px] text-slate-400 uppercase">bricks</div>
+      </div>
+      {/* Cost */}
+      {cost > 0 && (
+        <div className="text-center mt-1 pt-1 border-t border-slate-100">
+          <div className={`text-xs font-mono font-semibold ${isRevenue ? 'text-emerald-700' : 'text-amber-700'}`}>
+            {isRevenue ? '+' : '−'} {formatCurrency(cost)}
+          </div>
+          <div className="text-[10px] text-slate-400">{costLabel}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FlowArrow() {
+  return (
+    <div className="flex items-center justify-center">
+      <ChevronRight className="h-6 w-6 text-slate-300 rotate-90 lg:rotate-0" />
+    </div>
   );
 }
