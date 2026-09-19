@@ -87,13 +87,13 @@ export default function UsersPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
               <tr>
-                <th className="text-left px-4 py-3 font-semibold">Username</th>
-                <th className="text-left px-4 py-3 font-semibold">Name</th>
-                <th className="text-left px-4 py-3 font-semibold">Role</th>
-                <th className="text-left px-4 py-3 font-semibold">Department</th>
-                <th className="text-left px-4 py-3 font-semibold">Last Login</th>
-                <th className="text-left px-4 py-3 font-semibold">Status</th>
-                <th className="text-right px-4 py-3 font-semibold">Actions</th>
+                <th className="text-left px-4 py-3 font-semibold">Username<br/><span className="text-[10px] text-slate-400 normal-case">یوزر نیم</span></th>
+                <th className="text-left px-4 py-3 font-semibold">Name<br/><span className="text-[10px] text-slate-400 normal-case">نام</span></th>
+                <th className="text-left px-4 py-3 font-semibold">Role<br/><span className="text-[10px] text-slate-400 normal-case">رول</span></th>
+                <th className="text-left px-4 py-3 font-semibold">Department<br/><span className="text-[10px] text-slate-400 normal-case">ڈیپارٹمنٹ</span></th>
+                <th className="text-left px-4 py-3 font-semibold">Last Login<br/><span className="text-[10px] text-slate-400 normal-case">آخری لاگ ان</span></th>
+                <th className="text-left px-4 py-3 font-semibold">Status<br/><span className="text-[10px] text-slate-400 normal-case">حالت</span></th>
+                <th className="text-right px-4 py-3 font-semibold">Actions<br/><span className="text-[10px] text-slate-400 normal-case">عمل</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -104,8 +104,8 @@ export default function UsersPage() {
                     <div className="font-medium text-slate-900">{u.fullName}</div>
                     {u.email && <div className="text-xs text-slate-500">{u.email}</div>}
                   </td>
-                  <td className="px-4 py-2"><span className="badge-info">{u.roleName}</span></td>
-                  <td className="px-4 py-2 text-slate-700">{departments.find((d) => d.id === u.departmentId)?.name || '—'}</td>
+                  <td className="px-4 py-2"><span className="badge-info">{u.roleName || roles.find((r) => r.id === u.roleId)?.name || '—'}</span></td>
+                  <td className="px-4 py-2 text-slate-700">{u.departmentName || departments.find((d) => d.id === u.departmentId)?.name || '—'}</td>
                   <td className="px-4 py-2 text-slate-600 text-xs">{u.lastLoginAt ? formatDate(u.lastLoginAt) : 'Never'}</td>
                   <td className="px-4 py-2">
                     {u.isActive ? <span className="badge-success">Active</span> : <span className="badge-default">Disabled</span>}

@@ -13,12 +13,9 @@ import { WorkerScanModal, QuickProductionEntry } from '../components/WorkerScanM
 // Map departments to their relevant production stages.
 // A supervisor of a department should only see their own stage.
 const DEPARTMENT_STAGES: Record<string, string[]> = {
-  'dept-raw-brick':      ['raw_brick_making'],
-  'dept-transport':      ['raw_brick_transport'],
-  'dept-kiln-loading':  ['kiln_loading'],
-  'dept-kiln-firing':   ['kiln_loading'],  // firing dept can also do loading
-  'dept-kiln-unloading':['baked_brick_unloading'],
-  'dept-grading':       ['baked_brick_unloading'],
+  'dept-raw-brick':  ['raw_brick_making'],
+  'dept-transport':  ['raw_brick_transport'],
+  'dept-unloading':  ['baked_brick_unloading'],
 };
 
 const ALL_STAGES = [

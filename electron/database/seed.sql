@@ -8,26 +8,19 @@
 -- 1. DEFAULT DEPARTMENTS
 -- ============================================================
 INSERT OR IGNORE INTO departments (id, name, code, description, is_system, is_active, sort_order) VALUES
-  ('dept-raw-brick',     'Raw Brick Making',       'RAW',    'Production of raw bricks from clay',     1, 1, 1),
-  ('dept-transport',     'Raw Brick Transportation','TRNS',  'Transport of raw bricks to kiln',         1, 1, 2),
-  ('dept-kiln-loading',  'Kiln Loading',           'LOAD',   'Loading/placement of bricks into kiln',  1, 1, 3),
-  ('dept-kiln-firing',   'Kiln Firing',            'FIRE',   'Kiln firing/burning operations',        1, 1, 4),
-  ('dept-kiln-unloading','Baked Brick Unloading',  'UNLD',   'Unloading baked bricks from kiln',       1, 1, 5),
-  ('dept-grading',       'Brick Sorting / Grading', 'GRAD',  'Sorting & grading baked bricks',         1, 1, 6),
-  ('dept-sales',         'Sales',                   'SALE',  'Sales & customer relations',             1, 1, 7),
-  ('dept-accounts',      'Accounts',                'ACCT',  'Financial records & expenses',          1, 1, 8),
-  ('dept-management',    'Management',              'MNGT',  'Overall kiln management',               1, 1, 9);
+  ('dept-raw-brick',     'Raw Brick Making (اینٹ بنانے والے)',       'RAW',    'Production of raw bricks from clay',     1, 1, 1),
+  ('dept-transport',     'Transport to Kiln (بھٹے تک لانے والے)',     'TRNS',  'Transport of raw bricks to kiln',         1, 1, 2),
+  ('dept-unloading',      'Baked Brick Unloading (پکی اینٹ نکالنے والے)', 'UNLD',  'Unloading baked bricks from kiln',       1, 1, 3),
+  ('dept-sales',          'Sales (سیلز)',                               'SALE',  'Sales & customer relations',             1, 1, 4),
+  ('dept-accounts',      'Accounts (اکاؤنٹس)',                          'ACCT',  'Financial records & expenses',           1, 1, 5);
 
 -- ============================================================
 -- 2. WORK TYPES (with default rates per 1000 bricks)
 -- ============================================================
 INSERT OR IGNORE INTO work_types (id, name, code, department_id, default_rate_per_1000, description, is_active) VALUES
-  ('wt-raw-making',   'Raw Brick Making',         'RAW_BRICK',    'dept-raw-brick',     1200, 'Making raw bricks from clay/mud', 1),
-  ('wt-transport',    'Raw Brick Transportation', 'TRANSPORT',   'dept-transport',     800,  'Transporting raw bricks to kiln', 1),
-  ('wt-kiln-loading', 'Kiln Loading / Placement', 'KILN_LOAD',   'dept-kiln-loading',  900,  'Loading bricks into kiln',        1),
-  ('wt-kiln-firing',  'Kiln Firing',              'KILN_FIRE',   'dept-kiln-firing',   500,  'Firing / burning kiln',           1),
-  ('wt-unloading',    'Baked Brick Unloading',    'BAKED_UNLD',  'dept-kiln-unloading',1000, 'Unloading baked bricks',          1),
-  ('wt-grading',      'Brick Sorting / Grading',  'GRADING',     'dept-grading',       400,  'Sorting & grading baked bricks', 1);
+  ('wt-raw-making',   'Raw Brick Making (اینٹ بنانا)',         'RAW_BRICK',    'dept-raw-brick',     1200, 'Making raw bricks from clay/mud', 1),
+  ('wt-transport',    'Transport to Kiln (بھٹے تک لے جانا)',    'TRANSPORT',   'dept-transport',     800,  'Transporting raw bricks to kiln', 1),
+  ('wt-unloading',    'Baked Brick Unloading (پکی اینٹ نکالنا)','BAKED_UNLD',  'dept-unloading',     1000, 'Unloading baked bricks',          1);
 
 -- ============================================================
 -- 3. BRICK CATEGORIES (Grades)
@@ -145,16 +138,13 @@ INSERT OR IGNORE INTO permissions (id, code, name, module, description) VALUES
 -- 6. ROLES
 -- ============================================================
 INSERT OR IGNORE INTO roles (id, name, description, is_system, is_active) VALUES
-  ('role-super-admin', 'Super Admin',                 'Full unrestricted system access',          1, 1),
-  ('role-admin',       'Admin',                       'Manage most of the system',                1, 1),
-  ('role-manager',     'Manager',                     'Operational management',                   1, 1),
-  ('role-accountant',  'Accountant',                  'Financial records, expenses, payments',   1, 1),
-  ('role-cashier',     'Cashier',                     'Cash sales & customer payments',           1, 1),
-  ('role-raw-maker',   'Raw Brick Maker Operator',   'Enter raw brick production',              1, 1),
-  ('role-transport',   'Raw Brick Transport Operator','Enter raw brick transportation',           1, 1),
-  ('role-kiln-load',   'Kiln Loading Operator',       'Enter kiln loading/placement',            1, 1),
-  ('role-kiln-unload', 'Kiln Unloading Operator',    'Enter baked brick unloading',              1, 1),
-  ('role-sales',       'Sales User',                  'Create sales and invoices',               1, 1);
+  ('role-super-admin', 'Super Admin (سپر ایڈمن)',           'Full unrestricted system access',          1, 1),
+  ('role-admin',       'Admin (ایڈمن)',                       'Manage most of the system',                1, 1),
+  ('role-accountant',  'Accountant (اکاؤنٹنٹ)',               'Financial records, expenses, payments',   1, 1),
+  ('role-raw-maker',   'Raw Brick Operator (اینٹ بنانے والا)', 'Enter raw brick production',              1, 1),
+  ('role-transport',   'Transport Operator (بھٹے لانے والا)',  'Enter raw brick transportation',           1, 1),
+  ('role-kiln-unload', 'Unloading Operator (اینٹ نکالنے والا)','Enter baked brick unloading',              1, 1),
+  ('role-sales',       'Sales User (سیلز)',                   'Create sales and invoices',               1, 1);
 
 -- ============================================================
 -- 7. ROLE_PERMISSIONS (Super Admin gets all; others get subsets)

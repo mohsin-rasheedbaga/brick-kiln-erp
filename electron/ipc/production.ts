@@ -193,7 +193,7 @@ export function registerProductionHandlers(): void {
       if (!args.workTypeId) throw new Error('Work type is required.');
 
       // Phase v1.9.6: Auto-set department from session if user is an operator
-      const OPERATOR_ROLES = ['role-raw-maker', 'role-transport', 'role-kiln-load', 'role-kiln-unload', 'role-sales'];
+      const OPERATOR_ROLES = ['role-raw-maker', 'role-transport', 'role-kiln-unload', 'role-sales'];
       const isOperator = OPERATOR_ROLES.includes(session.roleId);
       let departmentId = args.departmentId;
       if (!departmentId && session.departmentId && isOperator) {
@@ -349,7 +349,7 @@ export function registerProductionHandlers(): void {
       const params: any[] = [];
 
       // Phase v1.9.6: Department-scoped access — ONLY for operators, not accountant/manager
-      const OPERATOR_ROLES = ['role-raw-maker', 'role-transport', 'role-kiln-load', 'role-kiln-unload', 'role-sales'];
+      const OPERATOR_ROLES = ['role-raw-maker', 'role-transport', 'role-kiln-unload', 'role-sales'];
       const isOperator = OPERATOR_ROLES.includes(session.roleId);
       if (session.departmentId && isOperator) {
         where.push('pe.department_id = ?');

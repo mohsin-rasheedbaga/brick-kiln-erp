@@ -252,10 +252,7 @@ export function QuickProductionEntry({
   const DEPT_STAGE_MAP: Record<string, string> = {
     'dept-raw-brick': 'raw_brick_making',
     'dept-transport': 'raw_brick_transport',
-    'dept-kiln-loading': 'kiln_loading',
-    'dept-kiln-firing': 'kiln_loading',
-    'dept-kiln-unloading': 'baked_brick_unloading',
-    'dept-grading': 'baked_brick_unloading',
+    'dept-unloading': 'baked_brick_unloading',
   };
   const autoStage = DEPT_STAGE_MAP[workerDeptId] || 'raw_brick_making';
 

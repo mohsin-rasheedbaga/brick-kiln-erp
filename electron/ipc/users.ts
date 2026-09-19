@@ -50,7 +50,7 @@ function rowToUser(row: any): User {
     last_login_at: row.last_login_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
-  };
+  } as any;
 }
 
 const USER_SELECT = `

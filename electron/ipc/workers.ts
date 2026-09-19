@@ -192,7 +192,7 @@ export function registerWorkerHandlers(): void {
       // Phase v1.9.6: Department-scoped access — ONLY for department operators.
       // Accountant, Manager, Admin see ALL workers regardless of their department_id.
       const OPERATOR_ROLES = [
-        'role-raw-maker', 'role-transport', 'role-kiln-load', 'role-kiln-unload', 'role-sales'
+        'role-raw-maker', 'role-transport', 'role-kiln-unload', 'role-sales'
       ];
       const isOperator = OPERATOR_ROLES.includes(session.roleId);
       if (session.departmentId && isOperator) {
