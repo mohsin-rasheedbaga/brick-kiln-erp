@@ -19,10 +19,9 @@ const DEPARTMENT_STAGES: Record<string, string[]> = {
 };
 
 const ALL_STAGES = [
-  { value: 'raw_brick_making',       label: 'Raw Brick Making' },
-  { value: 'raw_brick_transport',     label: 'Raw Brick Transport' },
-  { value: 'kiln_loading',           label: 'Kiln Loading / Placement' },
-  { value: 'baked_brick_unloading',   label: 'Baked Brick Unloading' },
+  { value: 'raw_brick_making',       label: 'Raw Brick Making (کچی اینٹ بنانا)' },
+  { value: 'raw_brick_transport',     label: 'Transport + Loading (بھٹے تک لانا + بھٹے میں جوڑنا)' },
+  { value: 'baked_brick_unloading',   label: 'Baked Brick Unloading (پکی اینٹ نکالنا)' },
 ];
 
 export default function ProductionPage() {
@@ -354,7 +353,7 @@ function ProductionModal({ workers, departments, workTypes, kilns, categories, l
             {filteredWorkTypes.map((w) => <option key={w.id} value={w.id}>{w.name} (Rs. {w.default_rate_per_1000}/1000)</option>)}
           </select>
         </div>
-        {(form.stage === 'kiln_loading' || form.stage === 'baked_brick_unloading') && (
+        {(form.stage === 'raw_brick_transport' || form.stage === 'baked_brick_unloading') && (
           <div>
             <label className="label">Kiln</label>
             <select className="input" value={form.kilnId} onChange={(e) => setForm({ ...form, kilnId: e.target.value })}>

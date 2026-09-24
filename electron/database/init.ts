@@ -16,7 +16,7 @@ import log from 'electron-log';
 import { app } from 'electron';
 import { getDb, execSql, get, all, run, transaction } from './connection';
 
-const SCHEMA_VERSION = '2.8.1';
+const SCHEMA_VERSION = '2.8.2';
 
 /**
  * Resolve a SQL file path.
@@ -380,6 +380,37 @@ function runMigrations(): void {
     log.info('[db-init] Migration v2.8.1: departments consolidated');
   } catch (err) {
     log.warn('[db-init] Migration v2.8.1 (departments) error:', err);
+  }
+
+  // Migration v2.8.2: Merge kiln_loading stage into raw_brick_transport.
+  // User requested Transport + Loading be ONE team (no separate "Kiln Loading" stage).
+  // All historical production_entries with stage='kiln_loading' are re-pointed to
+  // 'raw_brick_transport' so the dashboard shows ONE combined row.
+  // Also re-point the work_type for any leftover 'wt-kiln-loading' rows.
+  try {
+    log.info('[db-init] Migration v2.8.2: merging kiln_loading stage -> raw_brick_transport');
+    const affected = get<{ c: number }>(db, "SELECT COUNT(*) AS c FROM production_entries WHERE stage = 'kiln_loading'");
+    if (affected && affected.c > 0) {
+      run(db, "UPDATE production_entries SET stage = 'raw_brick_transport' WHERE stage = 'kiln_loading'");
+      log.info(`[db-init] Migration v2.8.2: re-pointed ${affected.c} production_entries`);
+    }
+
+    // Re-point any leftover work_types whose department was dept-kiln-loading (already merged
+    // in v2.8.1 but the work_type row may have been preserved).
+    const leftWt = get<{ id: string }>(db, "SELECT id FROM work_types WHERE id = 'wt-kiln-loading'");
+    if (leftWt) {
+      // Delete it (since v2.8.1 already merged the linked data into dept-transport)
+      run(db, "UPDATE production_entries SET work_type_id = 'wt-transport' WHERE work_type_id = 'wt-kiln-loading'");
+      run(db, "DELETE FROM work_types WHERE id = 'wt-kiln-loading'");
+      log.info('[db-init] Migration v2.8.2: removed obsolete wt-kiln-loading work type');
+    }
+
+    // Canonical names for the remaining work types (with Urdu labels)
+    run(db, "UPDATE work_types SET name = 'Raw Brick Making (کچی اینٹ بنانا)' WHERE id = 'wt-raw-making'");
+    run(db, "UPDATE work_types SET name = 'Transport + Loading (بھٹے تک لانا + بھٹے میں جوڑنا)', department_id = 'dept-transport' WHERE id = 'wt-transport'");
+    run(db, "UPDATE work_types SET name = 'Baked Brick Unloading (پکی اینٹ نکالنا)', department_id = 'dept-unloading' WHERE id = 'wt-unloading'");
+  } catch (err) {
+    log.warn('[db-init] Migration v2.8.2 (stage merge) error:', err);
   }
 
   // Ensure schema_version is set to the latest

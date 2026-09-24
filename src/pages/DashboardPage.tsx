@@ -14,8 +14,8 @@ import { formatCurrency, formatNumber, formatDate } from '../lib/utils';
 
 const STAGE_LABELS: Record<string, string> = {
   raw_brick_making: 'Raw Brick',
-  raw_brick_transport: 'Transport',
-  kiln_loading: 'Kiln Loading',
+  raw_brick_transport: 'Transport + Loading',
+  kiln_loading: 'Transport + Loading',
   baked_brick_unloading: 'Unloading',
 };
 
@@ -92,35 +92,27 @@ export default function DashboardPage() {
               {/* Arrow */}
               <FlowArrow />
 
-              {/* Stage 2: Transport to Kiln */}
+              {/* Stage 2: Transport + Loading (merged) */}
               <FlowStageCard
                 icon={Truck}
                 iconColor="bg-blue-100 text-blue-700"
-                title="Transported to Kiln"
-                subtitle="بھٹے تک پہنچی"
-                quantity={stats.today.production_by_stage.find(p => p.stage === 'raw_brick_transport')?.total_qty || 0}
-                cost={stats.today.production_by_stage.find(p => p.stage === 'raw_brick_transport')?.total_labour || 0}
+                title="Transport + Loading"
+                subtitle="بھٹے تک + بھٹے میں جوڑنا"
+                quantity={
+                  (stats.today.production_by_stage.find(p => p.stage === 'raw_brick_transport')?.total_qty || 0)
+                  + (stats.today.production_by_stage.find(p => p.stage === 'kiln_loading')?.total_qty || 0)
+                }
+                cost={
+                  (stats.today.production_by_stage.find(p => p.stage === 'raw_brick_transport')?.total_labour || 0)
+                  + (stats.today.production_by_stage.find(p => p.stage === 'kiln_loading')?.total_labour || 0)
+                }
                 costLabel="Transport"
               />
 
               {/* Arrow */}
               <FlowArrow />
 
-              {/* Stage 3: Kiln Loading */}
-              <FlowStageCard
-                icon={Package}
-                iconColor="bg-purple-100 text-purple-700"
-                title="Loaded into Kiln"
-                subtitle="بھٹے میں لوڈ ہوئی"
-                quantity={stats.today.production_by_stage.find(p => p.stage === 'kiln_loading')?.total_qty || 0}
-                cost={stats.today.production_by_stage.find(p => p.stage === 'kiln_loading')?.total_labour || 0}
-                costLabel="Loading"
-              />
-
-              {/* Arrow */}
-              <FlowArrow />
-
-              {/* Stage 4: Baked Bricks Out */}
+              {/* Stage 3: Baked Bricks Out */}
               <FlowStageCard
                 icon={Flame}
                 iconColor="bg-orange-100 text-orange-700"
@@ -250,10 +242,18 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-400 text-center py-6">No production recorded today.</p>
             ) : (
               <BarChart
-                data={stats.today.production_by_stage.map((p) => ({
-                  label: STAGE_LABELS[p.stage] || p.stage,
-                  value: p.total_qty,
-                }))}
+                data={(() => {
+                  // Merge kiln_loading into raw_brick_transport (same team)
+                  const merged = new Map<string, number>();
+                  for (const p of stats.today.production_by_stage) {
+                    const key = p.stage === 'kiln_loading' ? 'raw_brick_transport' : p.stage;
+                    merged.set(key, (merged.get(key) || 0) + p.total_qty);
+                  }
+                  const ORDER = ['raw_brick_making', 'raw_brick_transport', 'baked_brick_unloading'];
+                  return Array.from(merged.entries())
+                    .sort((a, b) => ORDER.indexOf(a[0]) - ORDER.indexOf(b[0]))
+                    .map(([stage, qty]) => ({ label: STAGE_LABELS[stage] || stage, value: qty }));
+                })()}
                 formatValue={(n) => formatNumber(n)}
                 height={220}
               />
