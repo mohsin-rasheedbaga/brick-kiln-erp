@@ -76,6 +76,8 @@ const ALLOWED_CHANNELS = new Set<string>([
   'investors:list', 'investors:get', 'investors:create', 'investors:update', 'investors:set-status', 'investors:delete', 'investors:add-transaction', 'investors:monthly-profit',
   // network (local-only — never proxied)
   'network:get-config', 'network:save-config', 'network:get-status', 'network:get-ips', 'network:test-connection', 'network:add-firewall', 'network:check-firewall', 'network:remove-firewall',
+  // mobile API (used by Android app over HTTP)
+  'mobile:context', 'mobile:submit-production', 'mobile:sync-status',
 ]);
 
 function readNetworkMode(): { mode: string; host: string; port: number; accessCode: string } {

@@ -54,6 +54,8 @@ import * as gdriveService from './services/gdrive';
 import { registerInvestorHandlers } from './ipc/investors';
 import { registerWithdrawHandlers } from './ipc/withdraw';
 import { registerProductionCostReportHandlers } from './ipc/productionCostReport';
+// Mobile API (for Android app)
+import { registerMobileHandlers } from './ipc/mobile';
 // Network sharing
 import { applyIpcPatching } from './utils/patchIpc';
 import { registerNetworkHandlers } from './ipc/networkConfig';
@@ -238,6 +240,8 @@ function registerIpcHandlers(): void {
   registerInvestorHandlers();
   registerWithdrawHandlers();
   registerProductionCostReportHandlers();
+  // Mobile API (for Android app)
+  registerMobileHandlers();
   // Network config (local-only handlers)
   registerNetworkHandlers();
   log.info('[main] All IPC handlers registered.');
