@@ -54,6 +54,11 @@ import * as gdriveService from './services/gdrive';
 import { registerInvestorHandlers } from './ipc/investors';
 import { registerWithdrawHandlers } from './ipc/withdraw';
 import { registerProductionCostReportHandlers } from './ipc/productionCostReport';
+// Network sharing
+import { applyIpcPatching } from './utils/patchIpc';
+import { registerNetworkHandlers } from './ipc/networkConfig';
+import { startNetworkServer } from './services/networkServer';
+import { getNetworkConfig, isServerMode } from './services/networkConfig';
 
 // Configure logging
 log.transports.file.level = 'info';
@@ -190,9 +195,13 @@ function showAbout(): void {
 
 /**
  * Register all IPC handlers.
+ * IMPORTANT: applyIpcPatching() must be called BEFORE any handler registration
+ * so that ipcMain.handle is intercepted and each handler is also registered
+ * with the network RPC server.
  */
 function registerIpcHandlers(): void {
   log.info('[main] Registering IPC handlers...');
+  applyIpcPatching(); // patch ipcMain.handle for RPC bridging
   registerAuthHandlers();
   registerDepartmentHandlers();
   registerWorkerHandlers();
@@ -229,6 +238,8 @@ function registerIpcHandlers(): void {
   registerInvestorHandlers();
   registerWithdrawHandlers();
   registerProductionCostReportHandlers();
+  // Network config (local-only handlers)
+  registerNetworkHandlers();
   log.info('[main] All IPC handlers registered.');
 }
 
@@ -264,7 +275,7 @@ function configureAutoUpdater(): void {
 
 // ============== App Lifecycle ==============
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   log.info('[main] App ready. Initializing...');
 
   try {
@@ -281,6 +292,26 @@ app.whenReady().then(() => {
 
   registerIpcHandlers();
   configureAutoUpdater();
+
+  // If this PC is configured as a server, start the network RPC server now.
+  // Other PCs on the LAN can then connect via Wi-Fi.
+  if (isServerMode()) {
+    const cfg = getNetworkConfig();
+    try {
+      log.info(`[main] Server mode active — starting RPC server on port ${cfg.port}...`);
+      const result = await startNetworkServer(cfg.port);
+      log.info(`[main] RPC server running. Local IPs: ${result.ips.join(', ')}`);
+      log.info(`[main] Clients can connect to: http://<one-of-above>:${cfg.port}`);
+    } catch (err) {
+      log.error('[main] Failed to start RPC server:', err);
+      dialog.showErrorBox(
+        'Network Server Failed',
+        `Could not start the network server on port ${cfg.port}.\n\nError: ${err instanceof Error ? err.message : String(err)}\n\n` +
+        `Other PCs will not be able to connect until this is fixed. ` +
+        `You can change the port in Network Settings, or switch to Standalone mode.`
+      );
+    }
+  }
 
   mainWindow = createMainWindow();
 

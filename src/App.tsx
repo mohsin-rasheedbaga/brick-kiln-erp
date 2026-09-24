@@ -15,6 +15,7 @@ import SettingsPage from './pages/SettingsPage';
 import AuditLogPage from './pages/AuditLogPage';
 import BackupPage from './pages/BackupPage';
 import UpdatesPage from './pages/UpdatesPage';
+import NetworkSettingsPage from './pages/NetworkSettingsPage';
 // Phase 2 pages
 import BatchesPage from './pages/BatchesPage';
 import CustomersPage from './pages/CustomersPage';
@@ -109,6 +110,7 @@ export default function App() {
           <Route path="users" element={<RequirePermission code="users.manage"><UsersPage /></RequirePermission>} />
           <Route path="roles" element={<RequirePermission code="roles.manage"><RolesPage /></RequirePermission>} />
           <Route path="settings" element={<RequirePermission code="settings.manage"><SettingsPage /></RequirePermission>} />
+          <Route path="network" element={<RequirePermission code="settings.manage"><NetworkSettingsPage /></RequirePermission>} />
           <Route path="audit" element={<RequirePermission code="system.audit"><AuditLogPage /></RequirePermission>} />
           <Route path="backup" element={<RequirePermission code="system.backup"><BackupPage /></RequirePermission>} />
           <Route path="updates" element={<UpdatesPage />} />

@@ -584,3 +584,24 @@ export const withdraw = {
 export const productionCostReport = {
   get: (from: string, to: string) => call<any>('reports:production-cost', { from, to }),
 };
+
+// =================== Network / Sharing API (v2.8.0) ===================
+
+export const network = {
+  getConfig: () => call<any>('network:get-config'),
+  saveConfig: (data: {
+    mode: 'standalone' | 'server' | 'client';
+    host?: string;
+    port?: number;
+    accessCode?: string;
+    machineName?: string;
+    autoFirewall?: boolean;
+  }) => call<any>('network:save-config', data),
+  getStatus: () => call<any>('network:get-status'),
+  getIps: () => call<string[]>('network:get-ips'),
+  testConnection: (host: string, port?: number) =>
+    call<{ reachable: boolean; message: string; serverInfo?: any }>('network:test-connection', { host, port }),
+  addFirewall: (port?: number) => call<{ success: boolean; message: string }>('network:add-firewall', { port }),
+  checkFirewall: (port?: number) => call<{ exists: boolean; port: number }>('network:check-firewall', { port }),
+  removeFirewall: () => call<{ success: boolean; message: string }>('network:remove-firewall'),
+};
