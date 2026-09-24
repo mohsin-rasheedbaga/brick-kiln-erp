@@ -16,7 +16,7 @@ import log from 'electron-log';
 import { app } from 'electron';
 import { getDb, execSql, get, all, run, transaction } from './connection';
 
-const SCHEMA_VERSION = '1.0.0';
+const SCHEMA_VERSION = '2.8.1';
 
 /**
  * Resolve a SQL file path.
@@ -275,6 +275,111 @@ function runMigrations(): void {
     }
   } catch (err) {
     log.warn('[db-init] Migration v2.3.0 (brick_categories columns) error:', err);
+  }
+
+  // Migration v2.8.1: Consolidate departments per user request.
+  // The user has 3 production teams in real life:
+  //   1. Raw Brick Making (کچی اینٹ بنانے والے)
+  //   2. Transport + Loading (بھٹے تک لانے والے + بھٹے میں جوڑنے والے) — ONE team
+  //   3. Baked Brick Unloading (پکی اینٹ نکالنے والے)
+  // Old "Kiln Loading" was a separate department — it is now merged into "Transport".
+  // Old "Kiln Firing", "Grading", "Management" departments are deactivated (data preserved).
+  try {
+    log.info('[db-init] Migration v2.8.1: consolidating departments');
+
+    // Step 1: Make sure the canonical "Transport to Kiln" department exists with merged description.
+    // (Some installs may have it as 'Raw Brick Transportation' — update the name.)
+    run(db, `UPDATE departments SET
+              name = 'Transport to Kiln (بھٹے تک لانے والے)',
+              description = 'Transport of raw bricks to kiln AND loading/placement into kiln — same team'
+             WHERE id = 'dept-transport'`);
+
+    // Step 2: Merge dept-kiln-loading INTO dept-transport.
+    // Re-point ALL foreign-key references from dept-kiln-loading -> dept-transport.
+    const oldLoadingExists = get<{ id: string }>(db, "SELECT id FROM departments WHERE id = 'dept-kiln-loading'");
+    if (oldLoadingExists) {
+      log.info('[db-init] Migration v2.8.1: merging dept-kiln-loading -> dept-transport');
+      // Workers
+      run(db, "UPDATE workers SET department_id = 'dept-transport' WHERE department_id = 'dept-kiln-loading'");
+      // Production entries
+      run(db, "UPDATE production_entries SET department_id = 'dept-transport' WHERE department_id = 'dept-kiln-loading'");
+      // Users
+      run(db, "UPDATE users SET department_id = 'dept-transport' WHERE department_id = 'dept-kiln-loading'");
+      // Expenses
+      run(db, "UPDATE expenses SET department_id = 'dept-transport' WHERE department_id = 'dept-kiln-loading'");
+      // Department rates
+      run(db, "UPDATE department_rates SET department_id = 'dept-transport' WHERE department_id = 'dept-kiln-loading'");
+      // Work types pointing to old department
+      run(db, "UPDATE work_types SET department_id = 'dept-transport' WHERE department_id = 'dept-kiln-loading'");
+      // Finally delete the old department row
+      run(db, "DELETE FROM departments WHERE id = 'dept-kiln-loading'");
+    }
+
+    // Step 3: Make sure dept-unloading exists with correct name.
+    // (Older installs may have it as 'Baked Brick Unloading' or 'dept-kiln-unloading'.)
+    const oldUnloadingExists = get<{ id: string }>(db, "SELECT id FROM departments WHERE id = 'dept-kiln-unloading'");
+    if (oldUnloadingExists) {
+      log.info('[db-init] Migration v2.8.1: migrating dept-kiln-unloading -> dept-unloading');
+      run(db, "UPDATE workers SET department_id = 'dept-unloading' WHERE department_id = 'dept-kiln-unloading'");
+      run(db, "UPDATE production_entries SET department_id = 'dept-unloading' WHERE department_id = 'dept-kiln-unloading'");
+      run(db, "UPDATE users SET department_id = 'dept-unloading' WHERE department_id = 'dept-kiln-unloading'");
+      run(db, "UPDATE expenses SET department_id = 'dept-unloading' WHERE department_id = 'dept-kiln-unloading'");
+      run(db, "UPDATE department_rates SET department_id = 'dept-unloading' WHERE department_id = 'dept-kiln-unloading'");
+      run(db, "UPDATE work_types SET department_id = 'dept-unloading' WHERE department_id = 'dept-kiln-unloading'");
+      run(db, "DELETE FROM departments WHERE id = 'dept-kiln-unloading'");
+    }
+    // Ensure canonical unloading row exists with proper name
+    run(db, `INSERT OR IGNORE INTO departments (id, name, code, description, is_system, is_active, sort_order)
+              VALUES ('dept-unloading', 'Baked Brick Unloading (پکی اینٹ نکالنے والے)', 'UNLD',
+                      'Unloading baked bricks from kiln', 1, 1, 3)`);
+    run(db, `UPDATE departments SET
+              name = 'Baked Brick Unloading (پکی اینٹ نکالنے والے)',
+              description = 'Unloading baked bricks from kiln'
+             WHERE id = 'dept-unloading'`);
+
+    // Step 4: Canonical names for remaining production depts
+    run(db, `UPDATE departments SET
+              name = 'Raw Brick Making (کچی اینٹ بنانے والے)',
+              description = 'Production of raw bricks from clay'
+             WHERE id = 'dept-raw-brick'`);
+
+    // Step 5: Deactivate obsolete departments that should no longer appear in dropdowns.
+    // We DON'T delete them (data preserved) — we just mark them inactive.
+    // The frontend already filters inactive departments from create/edit dropdowns by default.
+    const obsoleteDepts = [
+      'dept-kiln-firing',   // Kiln firing is usually done by the same person doing the loading/unloading
+      'dept-grading',        // Grading is done by unloading team
+      'dept-management',     // Not used in the simplified structure
+    ];
+    for (const deptId of obsoleteDepts) {
+      const exists = get<{ id: string }>(db, 'SELECT id FROM departments WHERE id = ?', deptId);
+      if (exists) {
+        // Re-point any users/workers/production/expenses to dept-management → none, or keep as-is but inactive
+        run(db, "UPDATE departments SET is_active = 0 WHERE id = ?", deptId);
+        log.info(`[db-init] Migration v2.8.1: deactivated obsolete department ${deptId}`);
+      }
+    }
+
+    // Step 6: Also ensure 'dept-sales' and 'dept-accounts' have Urdu labels
+    run(db, `UPDATE departments SET
+              name = 'Sales (سیلز)',
+              description = 'Sales & customer relations — salaried (ماہانہ)'
+             WHERE id = 'dept-sales'`);
+    run(db, `UPDATE departments SET
+              name = 'Accounts (اکاؤنٹس)',
+              description = 'Financial records & expenses — salaried (ماہانہ)'
+             WHERE id = 'dept-accounts'`);
+
+    // Step 7: Make sure only the 5 essential departments are active (rest inactive)
+    // Essential: dept-raw-brick, dept-transport, dept-unloading, dept-sales, dept-accounts
+    const essential = ['dept-raw-brick', 'dept-transport', 'dept-unloading', 'dept-sales', 'dept-accounts'];
+    const placeholder = essential.map(() => '?').join(',');
+    run(db, `UPDATE departments SET is_active = 1 WHERE id IN (${placeholder})`, ...essential);
+    run(db, `UPDATE departments SET is_active = 0 WHERE id NOT IN (${placeholder})`, ...essential);
+
+    log.info('[db-init] Migration v2.8.1: departments consolidated');
+  } catch (err) {
+    log.warn('[db-init] Migration v2.8.1 (departments) error:', err);
   }
 
   // Ensure schema_version is set to the latest

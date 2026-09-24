@@ -7,12 +7,15 @@
 -- ============================================================
 -- 1. DEFAULT DEPARTMENTS
 -- ============================================================
+-- Three production (ٹھیکے دار) teams + salaried support teams.
+-- Production: Raw Brick Making, Transport+Loading (merged), Baked Brick Unloading.
+-- Salaried:   Sales, Accounts.
 INSERT OR IGNORE INTO departments (id, name, code, description, is_system, is_active, sort_order) VALUES
-  ('dept-raw-brick',     'Raw Brick Making (اینٹ بنانے والے)',       'RAW',    'Production of raw bricks from clay',     1, 1, 1),
-  ('dept-transport',     'Transport to Kiln (بھٹے تک لانے والے)',     'TRNS',  'Transport of raw bricks to kiln',         1, 1, 2),
-  ('dept-unloading',      'Baked Brick Unloading (پکی اینٹ نکالنے والے)', 'UNLD',  'Unloading baked bricks from kiln',       1, 1, 3),
-  ('dept-sales',          'Sales (سیلز)',                               'SALE',  'Sales & customer relations',             1, 1, 4),
-  ('dept-accounts',      'Accounts (اکاؤنٹس)',                          'ACCT',  'Financial records & expenses',           1, 1, 5);
+  ('dept-raw-brick',  'Raw Brick Making (کچی اینٹ بنانے والے)',           'RAW',   'Production of raw bricks from clay',                                          1, 1, 1),
+  ('dept-transport',  'Transport to Kiln (بھٹے تک لانے والے)',             'TRNS',  'Transport of raw bricks to kiln AND loading/placement into kiln — same team',  1, 1, 2),
+  ('dept-unloading',   'Baked Brick Unloading (پکی اینٹ نکالنے والے)',      'UNLD',  'Unloading baked bricks from kiln',                                              1, 1, 3),
+  ('dept-sales',       'Sales (سیلز)',                                       'SALE',  'Sales & customer relations — salaried (ماہانہ)',                              1, 1, 4),
+  ('dept-accounts',    'Accounts (اکاؤنٹس)',                                'ACCT',  'Financial records & expenses — salaried (ماہانہ)',                            1, 1, 5);
 
 -- ============================================================
 -- 2. WORK TYPES (with default rates per 1000 bricks)

@@ -20,37 +20,46 @@ import { ok, wrap, type IpcResult } from '../utils/ipc';
 export interface User {
   id: string;
   username: string;
-  full_name: string;
+  fullName: string;
   email: string | null;
   phone: string | null;
-  role_id: string;
-  role_name?: string;
-  department_id: string | null;
-  department_name?: string;
-  is_active: boolean;
-  must_change_password: boolean;
-  last_login_at: string | null;
-  created_at: string;
-  updated_at: string;
+  roleId: string;
+  roleName?: string;
+  departmentId?: string | null;
+  departmentName?: string;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  customPermissions?: string[] | null;
 }
 
 function rowToUser(row: any): User {
+  let customPerms: string[] | null = null;
+  if (row.custom_permissions) {
+    try {
+      const parsed = JSON.parse(row.custom_permissions);
+      if (Array.isArray(parsed)) customPerms = parsed as string[];
+    } catch { /* ignore */ }
+  }
   return {
     id: row.id,
     username: row.username,
-    full_name: row.full_name,
+    fullName: row.full_name,
     email: row.email,
     phone: row.phone,
-    role_id: row.role_id,
-    role_name: row.role_name,
-    department_id: row.department_id,
-    department_name: row.department_name,
-    is_active: !!row.is_active,
-    must_change_password: !!row.must_change_password,
-    last_login_at: row.last_login_at,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  } as any;
+    roleId: row.role_id,
+    roleName: row.role_name,
+    departmentId: row.department_id ?? undefined,
+    departmentName: row.department_name,
+    isActive: !!row.is_active,
+    mustChangePassword: !!row.must_change_password,
+    lastLoginAt: row.last_login_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    customPermissions: customPerms,
+  };
 }
 
 const USER_SELECT = `
