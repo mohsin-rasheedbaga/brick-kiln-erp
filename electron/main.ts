@@ -61,6 +61,7 @@ import { applyIpcPatching } from './utils/patchIpc';
 import { registerNetworkHandlers } from './ipc/networkConfig';
 import { startNetworkServer } from './services/networkServer';
 import { getNetworkConfig, isServerMode } from './services/networkConfig';
+import { runFirstRunSetup, isFirstRun } from './services/firstRun';
 
 // Configure logging
 log.transports.file.level = 'info';
@@ -296,6 +297,19 @@ app.whenReady().then(async () => {
 
   registerIpcHandlers();
   configureAutoUpdater();
+
+  // First-run setup: if this is a fresh install, prompt the user to enable
+  // network sharing automatically (with UAC for firewall). This avoids the
+  // need to manually open Network Settings on every install.
+  if (isFirstRun()) {
+    log.info('[main] First run detected — starting setup wizard');
+    try {
+      await runFirstRunSetup();
+    } catch (err) {
+      log.error('[main] First-run setup failed:', err);
+      // Don't quit — fall through to normal startup
+    }
+  }
 
   // If this PC is configured as a server, start the network RPC server now.
   // Other PCs on the LAN can then connect via Wi-Fi.

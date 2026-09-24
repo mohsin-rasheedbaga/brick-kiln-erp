@@ -20,6 +20,8 @@ export interface NetworkConfig {
   accessCode?: string;
   machineName?: string;
   updatedAt?: string;
+  /** Set to true after the first-run setup wizard has completed. */
+  firstRunCompleted?: boolean;
 }
 
 const DEFAULT_CONFIG: NetworkConfig = {
