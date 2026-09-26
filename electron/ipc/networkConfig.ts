@@ -16,6 +16,7 @@ import { ipcMain } from 'electron';
 import log from 'electron-log';
 import { getNetworkConfig, saveNetworkConfig } from '../services/networkConfig';
 import { startNetworkServer, stopNetworkServer, isServerRunning, getServerPort, getLocalIpAddresses } from '../services/networkServer';
+import { startBeacon, stopBeacon } from '../services/beacon';
 import { checkFirewallRule, addFirewallRule, removeFirewallRule, isWindows } from '../services/firewall';
 import { wrap, type IpcResult } from '../utils/ipc';
 
@@ -55,6 +56,8 @@ export function registerNetworkHandlers(): void {
       if (saved.mode === 'server') {
         if (isServerRunning()) await stopNetworkServer();
         await startNetworkServer(saved.port);
+        // Start broadcasting our presence so mobile apps auto-discover us.
+        startBeacon();
         if (args.autoFirewall) {
           const result = await addFirewallRule(saved.port);
           log.info('[network] Firewall result:', result);
@@ -64,6 +67,8 @@ export function registerNetworkHandlers(): void {
       }
 
       if (isServerRunning()) await stopNetworkServer();
+      // Stop broadcasting when switching away from Server mode.
+      stopBeacon();
       return { config: saved, serverStarted: false, port: 0, ips: getLocalIpAddresses(), firewall: { success: false, message: '' } };
     })();
   });

@@ -62,6 +62,7 @@ import { registerNetworkHandlers } from './ipc/networkConfig';
 import { startNetworkServer } from './services/networkServer';
 import { getNetworkConfig, isServerMode } from './services/networkConfig';
 import { runFirstRunSetup, isFirstRun } from './services/firstRun';
+import { startBeacon, stopBeacon } from './services/beacon';
 
 // Configure logging
 log.transports.file.level = 'info';
@@ -320,6 +321,9 @@ app.whenReady().then(async () => {
       const result = await startNetworkServer(cfg.port);
       log.info(`[main] RPC server running. Local IPs: ${result.ips.join(', ')}`);
       log.info(`[main] Clients can connect to: http://<one-of-above>:${cfg.port}`);
+
+      // Start UDP beacon so mobile apps auto-discover this server without manual IP entry.
+      startBeacon();
     } catch (err) {
       log.error('[main] Failed to start RPC server:', err);
       dialog.showErrorBox(
@@ -376,6 +380,7 @@ app.on('activate', () => {
 
 app.on('before-quit', () => {
   log.info('[main] App quitting. Closing database...');
+  stopBeacon();  // stop broadcasting so mobile apps can detect the server went away
   closeDb();
 });
 

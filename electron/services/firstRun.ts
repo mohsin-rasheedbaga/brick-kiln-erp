@@ -20,6 +20,7 @@ import { app, dialog, BrowserWindow } from 'electron';
 import log from 'electron-log';
 import { getNetworkConfig, saveNetworkConfig, NetworkConfig } from './networkConfig';
 import { startNetworkServer, getLocalIpAddresses } from './networkServer';
+import { startBeacon } from './beacon';
 import { addFirewallRule, isWindows, checkFirewallRule } from './firewall';
 
 let firstRunShown = false;
@@ -169,6 +170,8 @@ export async function runFirstRunSetup(): Promise<{
     ips = result.ips;
     serverStarted = true;
     log.info(`[first-run] RPC server started. Local IPs: ${ips.join(', ')}`);
+    // Start the UDP beacon so mobile apps auto-discover us — no IP typing needed.
+    startBeacon();
   } catch (err) {
     log.error('[first-run] Failed to start RPC server:', err);
   }
