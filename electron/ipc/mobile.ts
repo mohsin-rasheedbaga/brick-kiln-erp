@@ -78,32 +78,64 @@ export function registerMobileHandlers(): void {
         db, `SELECT id, name, code, default_selling_rate FROM brick_categories WHERE is_active = 1 ORDER BY sort_order`
       );
 
-      // User's last 20 production entries
-      const recentEntries = all<any>(
-        db, `SELECT pe.id, pe.stage, pe.date, pe.quantity, pe.rate_per_1000, pe.labour_amount,
-                    pe.worker_id, w.full_name AS worker_name, w.worker_code,
-                    pe.department_id, d.name AS department_name,
-                    pe.work_type_id, wt.name AS work_type_name,
-                    pe.batch_id, pe.kiln_id, k.name AS kiln_name,
-                    pe.notes, pe.created_at
-             FROM production_entries pe
-             LEFT JOIN workers w ON pe.worker_id = w.id
-             LEFT JOIN departments d ON pe.department_id = d.id
-             LEFT JOIN work_types wt ON pe.work_type_id = wt.id
-             LEFT JOIN kilns k ON pe.kiln_id = k.id
-             WHERE pe.entered_by = ?
-             ORDER BY pe.created_at DESC LIMIT 20`,
-        session.userId
-      );
+      // Recent entries: the user's own recent entries AND (for operators) entries
+      // in their department. For non-operators (admin/manager), we show their own
+      // entries only — they have access to the desktop ERP for the full view.
+      // For operators (raw-maker, transport, kiln-unload), we also show their
+      // department's recent entries so they can see what's been entered today.
+      // (Re-use the isOperator flag computed above for the workers query.)
+      let recentEntries: any[];
+      if (isOperator && session.departmentId) {
+        recentEntries = all<any>(
+          db, `SELECT pe.id, pe.stage, pe.date, pe.quantity, pe.rate_per_1000, pe.labour_amount,
+                      pe.worker_id, w.full_name AS worker_name, w.worker_code,
+                      pe.department_id, d.name AS department_name,
+                      pe.work_type_id, wt.name AS work_type_name,
+                      pe.batch_id, pe.kiln_id, k.name AS kiln_name,
+                      pe.notes, pe.created_at
+               FROM production_entries pe
+               LEFT JOIN workers w ON pe.worker_id = w.id
+               LEFT JOIN departments d ON pe.department_id = d.id
+               LEFT JOIN work_types wt ON pe.work_type_id = wt.id
+               LEFT JOIN kilns k ON pe.kiln_id = k.id
+               WHERE pe.department_id = ?
+               ORDER BY pe.created_at DESC LIMIT 30`,
+          session.departmentId
+        );
+      } else {
+        recentEntries = all<any>(
+          db, `SELECT pe.id, pe.stage, pe.date, pe.quantity, pe.rate_per_1000, pe.labour_amount,
+                      pe.worker_id, w.full_name AS worker_name, w.worker_code,
+                      pe.department_id, d.name AS department_name,
+                      pe.work_type_id, wt.name AS work_type_name,
+                      pe.batch_id, pe.kiln_id, k.name AS kiln_name,
+                      pe.notes, pe.created_at
+               FROM production_entries pe
+               LEFT JOIN workers w ON pe.worker_id = w.id
+               LEFT JOIN departments d ON pe.department_id = d.id
+               LEFT JOIN work_types wt ON pe.work_type_id = wt.id
+               LEFT JOIN kilns k ON pe.kiln_id = k.id
+               WHERE pe.entered_by = ?
+               ORDER BY pe.created_at DESC LIMIT 20`,
+          session.userId
+        );
+      }
 
-      // Today's totals for the user (their dashboard cards)
+      // Today's totals — for operators, show their department's totals today;
+      // for non-operators, show the user's own totals.
+      const todayStatsWhere = (isOperator && session.departmentId)
+        ? 'WHERE department_id = ? AND date = date(\'now\')'
+        : 'WHERE entered_by = ? AND date = date(\'now\')';
+      const todayStatsParams = (isOperator && session.departmentId)
+        ? [session.departmentId]
+        : [session.userId];
       const todayStats = get<{ total_qty: number; total_labour: number; entry_count: number }>(
         db, `SELECT COALESCE(SUM(quantity),0) AS total_qty,
                     COALESCE(SUM(labour_amount),0) AS total_labour,
                     COUNT(*) AS entry_count
              FROM production_entries
-             WHERE entered_by = ? AND date = date('now')`,
-        session.userId
+             ${todayStatsWhere}`,
+        ...todayStatsParams
       );
 
       return {
