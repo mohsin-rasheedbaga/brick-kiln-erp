@@ -26,16 +26,29 @@ export function checkFirewallRule(port: number): Promise<boolean> {
   });
 }
 
-export function addFirewallRule(port: number): Promise<{ success: boolean; message: string }> {
+export function addFirewallRule(port: number, forceRecreate: boolean = false): Promise<{ success: boolean; message: string }> {
   if (!isWindows()) return Promise.resolve({ success: true, message: 'Not Windows — skipped.' });
   return new Promise(async (resolve) => {
     const exists = await checkFirewallRule(port);
-    if (exists) return resolve({ success: true, message: 'Firewall rule already exists.' });
+    if (exists && !forceRecreate) return resolve({ success: true, message: 'Firewall rule already exists.' });
 
-    log.info(`[firewall] Adding inbound TCP rule for port ${port} (UAC prompt will appear)...`);
+    log.info(`[firewall] ${forceRecreate ? 'Re-creating' : 'Adding'} inbound TCP rule for port ${port} (UAC prompt will appear)...`);
+    // Use -Profile Any so the rule applies on ALL network types:
+    // Domain, Private, AND Public. Many home Wi-Fi networks are classified
+    // as "Public" by Windows, which would block the connection if we only
+    // allowed Private+Domain.
+    // If forceRecreate=true, we first delete any existing rules (to fix
+    // rules that were created with the wrong profile in older versions).
     const psScript = `
       try {
-        New-NetFirewallRule -DisplayName '${RULE_NAME}' -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${port} -Profile Private,Domain -ErrorAction Stop | Out-Null
+        # Remove any existing rules (handles upgrade from older versions
+        # where the rule was created with -Profile Private,Domain only).
+        Remove-NetFirewallRule -DisplayName '${RULE_NAME}' -ErrorAction SilentlyContinue
+        Remove-NetFirewallRule -DisplayName '${RULE_NAME} Beacon' -ErrorAction SilentlyContinue
+        # Create new TCP rule with -Profile Any so it applies to all network types.
+        New-NetFirewallRule -DisplayName '${RULE_NAME}' -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${port} -Profile Any -ErrorAction Stop | Out-Null
+        # Also add a UDP rule for the beacon broadcast port (8766) so mobile apps can receive broadcasts.
+        New-NetFirewallRule -DisplayName '${RULE_NAME} Beacon' -Direction Inbound -Action Allow -Protocol UDP -LocalPort 8766 -Profile Any -ErrorAction Stop | Out-Null
         Write-Output 'SUCCESS'
       } catch { Write-Output ('FAILED: ' + $_.Exception.Message) }
     `.trim();
@@ -49,7 +62,7 @@ export function addFirewallRule(port: number): Promise<{ success: boolean; messa
     ps.on('close', async () => {
       const nowExists = await checkFirewallRule(port);
       if (nowExists) {
-        resolve({ success: true, message: 'Firewall rule created successfully. Clients can now connect.' });
+        resolve({ success: true, message: 'Firewall rule created successfully (applies to ALL network types: Public/Private/Domain). Clients can now connect.' });
       } else {
         resolve({ success: false, message: 'Firewall rule was not created. Did you click "Yes" on the UAC permission dialog?' });
       }
@@ -61,8 +74,11 @@ export function removeFirewallRule(): Promise<{ success: boolean; message: strin
   if (!isWindows()) return Promise.resolve({ success: true, message: 'Not Windows — skipped.' });
   return new Promise((resolve) => {
     const psScript = `
-      try { Remove-NetFirewallRule -DisplayName '${RULE_NAME}' -ErrorAction Stop; Write-Output 'SUCCESS' }
-      catch { Write-Output ('FAILED: ' + $_.Exception.Message) }
+      try {
+        Remove-NetFirewallRule -DisplayName '${RULE_NAME}' -ErrorAction Stop
+        Remove-NetFirewallRule -DisplayName '${RULE_NAME} Beacon' -ErrorAction Stop
+        Write-Output 'SUCCESS'
+      } catch { Write-Output ('FAILED: ' + $_.Exception.Message) }
     `.trim();
     const ps = spawn('powershell.exe', [
       '-NoProfile', '-NonInteractive', '-Command',

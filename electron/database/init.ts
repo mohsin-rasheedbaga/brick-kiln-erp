@@ -16,7 +16,7 @@ import log from 'electron-log';
 import { app } from 'electron';
 import { getDb, execSql, get, all, run, transaction } from './connection';
 
-const SCHEMA_VERSION = '2.8.2';
+const SCHEMA_VERSION = '2.9.3';
 
 /**
  * Resolve a SQL file path.
@@ -411,6 +411,31 @@ function runMigrations(): void {
     run(db, "UPDATE work_types SET name = 'Baked Brick Unloading (پکی اینٹ نکالنا)', department_id = 'dept-unloading' WHERE id = 'wt-unloading'");
   } catch (err) {
     log.warn('[db-init] Migration v2.8.2 (stage merge) error:', err);
+  }
+
+  // Migration v2.9.3: Reset firstRunCompleted so the firewall rule is re-created
+  // with the corrected -Profile Any setting (was Private,Domain in older versions).
+  // Many home Wi-Fi networks are classified as "Public" by Windows, which blocked
+  // inbound TCP connections on port 8765 even when the firewall rule existed.
+  try {
+    log.info('[db-init] Migration v2.9.3: resetting firstRunCompleted to re-create firewall rule');
+    // Read current network config and reset the firstRunCompleted flag.
+    // The firstRun.ts will detect this on next launch and re-run the setup wizard,
+    // which will re-create the firewall rule with -Profile Any.
+    const fs = require('fs');
+    const path = require('path');
+    const cfgPath = path.join(app.getPath('userData'), 'network.json');
+    if (fs.existsSync(cfgPath)) {
+      const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+      if (cfg.firstRunCompleted === true) {
+        cfg.firstRunCompleted = false;
+        cfg._recreateFirewallOnNextRun = true;  // hint to firstRun.ts to force re-create
+        fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf-8');
+        log.info('[db-init] Migration v2.9.3: firstRunCompleted reset — setup wizard will re-run on next launch');
+      }
+    }
+  } catch (err) {
+    log.warn('[db-init] Migration v2.9.3 (firewall reset) error:', err);
   }
 
   // Ensure schema_version is set to the latest
