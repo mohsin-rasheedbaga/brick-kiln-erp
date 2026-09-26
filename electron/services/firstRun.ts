@@ -26,11 +26,16 @@ let firstRunShown = false;
 
 /**
  * Returns true if this is the first time the app is being run
- * (i.e., network.json doesn't exist or firstRunCompleted flag is missing).
+ * (i.e., network.json doesn't exist or firstRunCompleted flag is missing),
+ * OR if the migration has set _recreateFirewallOnNextRun to force a firewall
+ * rule re-creation (e.g., to fix rules created with the wrong profile).
  */
 export function isFirstRun(): boolean {
-  const cfg = getNetworkConfig();
-  return !(cfg as any).firstRunCompleted;
+  const cfg = getNetworkConfig() as any;
+  if (cfg._recreateFirewallOnNextRun === true) {
+    return true;
+  }
+  return !cfg.firstRunCompleted;
 }
 
 /**
@@ -57,8 +62,44 @@ export async function runFirstRunSetup(): Promise<{
   }
   firstRunShown = true;
 
-  const cfg = getNetworkConfig();
+  const cfg = getNetworkConfig() as any;
   const port = cfg.port || 8765;
+
+  // Special case: if _recreateFirewallOnNextRun is set (by v2.9.3 migration),
+  // we skip the wizard dialog and directly re-create the firewall rule with
+  // the corrected -Profile Any setting. The server is already running.
+  if (cfg._recreateFirewallOnNextRun === true) {
+    log.info('[first-run] Forced firewall re-creation (migration v2.9.3)');
+    let firewallAdded = false;
+    if (isWindows()) {
+      const fwResult = await addFirewallRule(port, true /* forceRecreate */);
+      firewallAdded = fwResult.success;
+      log.info(`[first-run] Firewall re-create result: ${fwResult.success} — ${fwResult.message}`);
+
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Connection Fix Applied',
+        message: 'Network connection fixed',
+        detail:
+          `A firewall rule has been re-created with the correct settings\n` +
+          `so mobile apps can connect on any Wi-Fi network type.\n\n` +
+          `If your mobile app still can't connect, please:\n` +
+          `  1. Make sure the desktop ERP is running\n` +
+          `  2. Restart the mobile app\n` +
+          `  3. Tap "Re-scan Wi-Fi for server" on the login screen`,
+        buttons: ['OK'],
+      });
+    }
+    saveNetworkConfig({ _recreateFirewallOnNextRun: false, firstRunCompleted: true } as any);
+    return {
+      success: true,
+      mode: cfg.mode || 'server',
+      port,
+      ips: getLocalIpAddresses(),
+      firewallAdded,
+      message: 'Firewall rule re-created',
+    };
+  }
 
   log.info('[first-run] Starting first-run setup wizard...');
 

@@ -106,10 +106,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   if (req.method === 'POST' && url === '/rpc') {
     const cfg = getNetworkConfig();
-    if (cfg.accessCode) {
+    if (cfg.accessCode && cfg.accessCode.length > 0) {
       const provided = req.headers['x-access-code'];
       if (provided !== cfg.accessCode) {
-        sendJson(res, 401, { ok: false, error: { code: 'UNAUTHORIZED', message: 'Invalid access code.' } });
+        log.warn(`[rpc] 401 Unauthorized — access code mismatch. Expected: ${cfg.accessCode?.substring(0, 2)}***, Got: ${String(provided).substring(0, 2) || 'none'}***`);
+        sendJson(res, 401, { ok: false, error: { code: 'UNAUTHORIZED', message: 'Invalid or missing access code. The desktop ERP server requires an access code. Open the mobile app Settings to enter it.' } });
         return;
       }
     }

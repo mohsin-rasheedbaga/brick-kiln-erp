@@ -16,7 +16,7 @@ import log from 'electron-log';
 import { app } from 'electron';
 import { getDb, execSql, get, all, run, transaction } from './connection';
 
-const SCHEMA_VERSION = '2.8.2';
+const SCHEMA_VERSION = '2.9.4';
 
 /**
  * Resolve a SQL file path.
@@ -411,6 +411,47 @@ function runMigrations(): void {
     run(db, "UPDATE work_types SET name = 'Baked Brick Unloading (پکی اینٹ نکالنا)', department_id = 'dept-unloading' WHERE id = 'wt-unloading'");
   } catch (err) {
     log.warn('[db-init] Migration v2.8.2 (stage merge) error:', err);
+  }
+
+  // Migration v2.9.3: Reset firstRunCompleted so the firewall rule is re-created
+  // with the corrected -Profile Any setting (was Private,Domain in older versions).
+  try {
+    log.info('[db-init] Migration v2.9.3: resetting firstRunCompleted to re-create firewall rule');
+    const fs = require('fs');
+    const path = require('path');
+    const cfgPath = path.join(app.getPath('userData'), 'network.json');
+    if (fs.existsSync(cfgPath)) {
+      const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+      if (cfg.firstRunCompleted === true) {
+        cfg.firstRunCompleted = false;
+        cfg._recreateFirewallOnNextRun = true;
+        fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf-8');
+        log.info('[db-init] Migration v2.9.3: firstRunCompleted reset — setup wizard will re-run on next launch');
+      }
+    }
+  } catch (err) {
+    log.warn('[db-init] Migration v2.9.3 (firewall reset) error:', err);
+  }
+
+  // Migration v2.9.4: Clear any access code that may have been set accidentally.
+  // User reported 401 Unauthorized on mobile app login even though no access
+  // code was supposed to be configured. The fix: clear the accessCode field
+  // in network.json so the server doesn't require one for LAN access.
+  try {
+    log.info('[db-init] Migration v2.9.4: clearing access code (no LAN auth required by default)');
+    const fs = require('fs');
+    const path = require('path');
+    const cfgPath = path.join(app.getPath('userData'), 'network.json');
+    if (fs.existsSync(cfgPath)) {
+      const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+      if (cfg.accessCode && cfg.accessCode.length > 0) {
+        cfg.accessCode = '';
+        fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf-8');
+        log.info('[db-init] Migration v2.9.4: accessCode cleared — mobile apps can now connect without a code');
+      }
+    }
+  } catch (err) {
+    log.warn('[db-init] Migration v2.9.4 (access code clear) error:', err);
   }
 
   // Ensure schema_version is set to the latest
