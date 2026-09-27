@@ -20,6 +20,7 @@ import { app, dialog, BrowserWindow } from 'electron';
 import log from 'electron-log';
 import { getNetworkConfig, saveNetworkConfig, NetworkConfig } from './networkConfig';
 import { startNetworkServer, getLocalIpAddresses } from './networkServer';
+import { startBeacon } from './beacon';
 import { addFirewallRule, isWindows, checkFirewallRule } from './firewall';
 
 let firstRunShown = false;
