@@ -103,57 +103,17 @@ export async function runFirstRunSetup(): Promise<{
 
   log.info('[first-run] Starting first-run setup wizard...');
 
-  // Step 1: Ask user permission via a friendly dialog
-  const choice = await dialog.showMessageBox({
-    type: 'question',
-    title: 'Enable Multi-PC Sharing?',
-    message: 'Enable Network Sharing?',
-    detail:
-      `This PC can act as the MAIN server for other PCs and Android phones\n` +
-      `on the same Wi-Fi to connect to this software.\n\n` +
-      `If you click "Yes, Enable":\n` +
-      `  • Windows Firewall will request permission (one-time UAC prompt)\n` +
-      `  • This PC will start listening on port ${port}\n` +
-      `  • Other devices on your Wi-Fi can connect using this PC's IP\n\n` +
-      `If you click "No, Standalone":\n` +
-      `  • Only this PC will use the software (no sharing)\n` +
-      `  • You can enable sharing later from Network Settings\n\n` +
-      `Recommendation: Click "Yes, Enable" — you can always turn it off later.`,
-    buttons: [
-      'Yes, Enable Sharing',
-      'No, Standalone Only',
-      'Ask Me Later',
-    ],
-    defaultId: 0,
-    cancelId: 2,
-  });
-
-  if (choice.response === 2) {
-    // "Ask Me Later" — don't mark as completed, will run again next time
-    log.info('[first-run] User chose "Ask Me Later" — will prompt again next launch');
-    firstRunShown = false;  // allow re-prompting
-    return { success: false, mode: 'standalone', port: 0, ips: [], firewallAdded: false, message: 'User deferred' };
-  }
-
-  if (choice.response === 1) {
-    // Standalone only
-    log.info('[first-run] User chose Standalone mode');
-    saveNetworkConfig({ mode: 'standalone', firstRunCompleted: true } as any);
-    return { success: true, mode: 'standalone', port: 0, ips: [], firewallAdded: false, message: 'Standalone selected' };
-  }
-
-  // User chose "Yes, Enable Sharing"
-  log.info('[first-run] User chose Server mode — configuring...');
-
-  // Save server mode
+  // Step 1: Auto-enable server mode (no dialog — just do it)
+  // The user requested: "don't ask me every time, just auto-enable"
+  log.info('[first-run] Auto-enabling server mode...');
   saveNetworkConfig({ mode: 'server', port });
 
-  // Step 2: Add firewall rule (will trigger UAC prompt)
+  // Step 2: Add firewall rule (will trigger UAC prompt — one time only)
   let firewallAdded = false;
   let firewallMessage = 'Skipped (not Windows)';
   if (isWindows()) {
     log.info('[first-run] Requesting Windows Firewall permission (UAC prompt)...');
-    const fwResult = await addFirewallRule(port);
+    const fwResult = await addFirewallRule(port, true /* forceRecreate */);
     firewallAdded = fwResult.success;
     firewallMessage = fwResult.message;
     log.info(`[first-run] Firewall result: ${fwResult.success} — ${fwResult.message}`);
@@ -167,6 +127,8 @@ export async function runFirstRunSetup(): Promise<{
     ips = result.ips;
     serverStarted = true;
     log.info(`[first-run] RPC server started. Local IPs: ${ips.join(', ')}`);
+    // Start the UDP beacon so mobile apps auto-discover us — no IP typing needed.
+    startBeacon();
   } catch (err) {
     log.error('[first-run] Failed to start RPC server:', err);
   }
@@ -185,8 +147,8 @@ export async function runFirstRunSetup(): Promise<{
         `Other devices on your Wi-Fi can now connect to this PC.\n\n` +
         `Share this address with the other PCs/phones:\n` +
         `   ${ipList}\n\n` +
-        `On Android app: enter this IP during first setup.\n` +
-        `On other PCs: install Brick Kiln ERP → Network Settings → Client mode → enter this IP.\n\n` +
+        `On Android app: it will auto-discover this server.\n` +
+        `On other PCs: install Brick Kiln ERP → it will auto-discover too.\n\n` +
         `You can change these settings later from the Network Sharing page.`,
       buttons: ['OK'],
     });

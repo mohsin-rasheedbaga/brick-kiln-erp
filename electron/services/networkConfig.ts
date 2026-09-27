@@ -25,7 +25,8 @@ export interface NetworkConfig {
 }
 
 const DEFAULT_CONFIG: NetworkConfig = {
-  mode: 'standalone',
+  mode: 'server',  // Default to server mode — auto-enables sharing on every launch.
+                   // User can switch to 'standalone' via Network Settings if they don't want sharing.
   host: '',
   port: 8765,
   accessCode: '',
