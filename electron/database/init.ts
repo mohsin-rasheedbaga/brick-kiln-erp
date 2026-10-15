@@ -16,7 +16,7 @@ import log from 'electron-log';
 import { app } from 'electron';
 import { getDb, execSql, get, all, run, transaction } from './connection';
 
-const SCHEMA_VERSION = '2.9.4';
+const SCHEMA_VERSION = '2.9.7';
 
 /**
  * Resolve a SQL file path.
@@ -452,6 +452,25 @@ function runMigrations(): void {
     }
   } catch (err) {
     log.warn('[db-init] Migration v2.9.4 (access code clear) error:', err);
+  }
+
+  // Migration v2.9.7: Add category_id column to production_entries table.
+  // The mobile:submit-production handler inserts category_id for baked_brick_unloading
+  // stage, but the column doesn't exist in the original schema. This causes
+  // "no such column: category_id" error when syncing entries from mobile app.
+  try {
+    const cols = all<{ name: string }>(db, "PRAGMA table_info(production_entries)");
+    const colNames = new Set(cols.map((c) => c.name));
+    if (!colNames.has('category_id')) {
+      log.info('[db-init] Migration v2.9.7: adding production_entries.category_id column');
+      db.exec('ALTER TABLE production_entries ADD COLUMN category_id TEXT');
+    }
+    if (!colNames.has('transport_method')) {
+      log.info('[db-init] Migration v2.9.7: adding production_entries.transport_method column');
+      db.exec('ALTER TABLE production_entries ADD COLUMN transport_method TEXT');
+    }
+  } catch (err) {
+    log.warn('[db-init] Migration v2.9.7 (production_entries columns) error:', err);
   }
 
   // Ensure schema_version is set to the latest
